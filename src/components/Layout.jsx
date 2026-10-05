@@ -1,20 +1,40 @@
 import React, { useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Grid3x3, ListChecks, Search, ChevronDown, Building, X, Menu } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
 import { useQaData } from "@/lib/QaDataContext";
 import LocationTree from "@/components/LocationTree";
 import TreeLogo from "@/components/TreeLogo";
+import {
+  LayoutDashboard, ListTodo, ClipboardList, ListChecks, Grid3x3,
+  FileText, Milestone as MilestoneIcon, Activity as ActivityIcon, FileBarChart,
+  Settings, Users, Search, ChevronDown, Building, X, Menu, Sparkles,
+} from "lucide-react";
 
-const NAV = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/tracker", label: "Multi-Template Tracker", icon: Grid3x3 },
-  { to: "/visis", label: "Visis", icon: ListChecks },
+const ALL_NAV = [
+  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true, roles: ["admin", "pm", "trade", "viewer"] },
+  { to: "/my-tasks", label: "My Tasks", icon: ListTodo, roles: ["admin", "pm", "trade", "viewer"] },
+  { to: "/assign-tasks", label: "Assign Tasks", icon: ClipboardList, roles: ["admin", "pm"] },
+  { to: "/your-list", label: "Your List", icon: ListChecks, roles: ["admin", "pm", "trade"] },
+  { to: "/tracker", label: "Multi-Template Tracker", icon: Grid3x3, roles: ["admin", "pm", "trade", "viewer"] },
+  { to: "/documents", label: "Documents", icon: FileText, roles: ["admin", "pm", "trade", "viewer"] },
+  { to: "/milestones", label: "Milestone Tracker", icon: MilestoneIcon, roles: ["admin", "pm", "trade", "viewer"] },
+  { to: "/activity", label: "Activity", icon: ActivityIcon, roles: ["admin", "pm", "trade", "viewer"] },
+  { to: "/report", label: "Progress Report", icon: FileBarChart, roles: ["admin", "pm", "trade", "viewer"] },
+  { to: "/setup", label: "Project Setup", icon: Settings, roles: ["admin", "pm"] },
+  { to: "/users", label: "User Management", icon: Users, roles: ["admin"] },
 ];
 
 export default function Layout() {
-  const { project, locations, loading } = useQaData();
+  const { user } = useAuth();
+  const { project, projects, companyMap, locations, loading, selectProject } = useQaData();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const navigate = useNavigate();
+
+  const userRole = user?.role || "viewer";
+  const userCompany = user?.company_id ? companyMap[user.company_id] : null;
+  const nav = ALL_NAV.filter((n) => n.roles.includes(userRole));
+  const userInitial = (user?.full_name || user?.email || "?")[0]?.toUpperCase();
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background relative">
@@ -24,6 +44,7 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside className={`fixed md:static inset-y-0 left-0 z-40 w-[280px] shrink-0 bg-[#0F172A] text-slate-200 flex flex-col border-r border-slate-800 transition-transform duration-200 ${drawerOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
+        {/* Logo + app name */}
         <div className="px-4 py-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-emerald-700 to-emerald-900 flex items-center justify-center shadow-inner shrink-0">
@@ -44,12 +65,12 @@ export default function Layout() {
           <div className="relative w-full">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
-              placeholder="Search locations…"
+              placeholder="Search apartments…"
               onChange={(e) => {
-                const q = e.target.value.toLowerCase();
+                const q = e.target.value.toLowerCase().trim();
                 if (!q) return;
-                const match = locations.find((l) => l.name.toLowerCase().includes(q));
-                if (match) navigate(`/location/${match.id}`);
+                const match = locations.find((l) => l.name?.toLowerCase().includes(q) || l.apt_number?.toLowerCase().includes(q));
+                if (match) { navigate(`/location/${match.id}`); setDrawerOpen(false); }
               }}
               className="w-full rounded-md bg-slate-800 hover:bg-slate-700 focus:bg-slate-700 pl-9 pr-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
             />
@@ -57,21 +78,45 @@ export default function Layout() {
         </div>
 
         {/* Project switcher */}
-        <div className="px-3 py-3 border-b border-slate-800 space-y-2">
-          <div className="flex items-center gap-2 text-xs text-slate-400 px-1">
+        <div className="px-3 py-3 border-b border-slate-800">
+          <div className="flex items-center gap-2 text-xs text-slate-400 px-1 mb-1.5">
             <Building size={13} className="text-emerald-400" />
-            <span className="truncate">{loading ? "Loading…" : project?.name || "Cranmore Carpenters"}</span>
+            <span className="truncate">{userCompany?.name || "Cranmore Carpenters"}</span>
           </div>
-          <button className="w-full flex items-center justify-between gap-2 rounded-md bg-slate-800 hover:bg-slate-700 px-3 py-2 text-sm font-semibold transition-colors">
-            <span className="truncate text-white">{loading ? "Loading…" : project?.name || "Select project"}</span>
-            <ChevronDown size={15} className="text-slate-400" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setProjectMenuOpen((o) => !o)}
+              className="w-full flex items-center justify-between gap-2 rounded-md bg-slate-800 hover:bg-slate-700 px-3 py-2 text-sm font-semibold transition-colors"
+            >
+              <span className="truncate text-white">{loading ? "Loading…" : project?.name || "Select project"}</span>
+              <ChevronDown size={15} className={`text-slate-400 transition-transform ${projectMenuOpen ? "rotate-180" : ""}`} />
+            </button>
+            {projectMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setProjectMenuOpen(false)} />
+                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {(projects || []).map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => { selectProject(p.id); setProjectMenuOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700 transition-colors ${p.id === project?.id ? "text-emerald-400 font-semibold" : "text-slate-200"}`}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                  {(!projects || projects.length === 0) && (
+                    <div className="px-3 py-2 text-xs text-slate-500">No projects yet</div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Nav + Location tree */}
         <div className="flex-1 overflow-y-auto sidebar-scroll">
           <nav className="px-2 py-2 space-y-0.5">
-            {NAV.map((n) => (
+            {nav.map((n) => (
               <NavLink
                 key={n.to}
                 to={n.to}
@@ -93,9 +138,22 @@ export default function Layout() {
             <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Locations</div>
             {loading ? (
               <div className="px-3 py-2 text-xs text-slate-500">Loading…</div>
+            ) : locations.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-slate-500">No locations yet. Import data or add them in Project Setup.</div>
             ) : (
               <LocationTree locations={locations} onSelect={(l) => { navigate(`/location/${l.id}`); setDrawerOpen(false); }} />
             )}
+          </div>
+        </div>
+
+        {/* User footer */}
+        <div className="px-3 py-3 border-t border-slate-800 flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-full bg-emerald-500 text-slate-900 flex items-center justify-center text-xs font-bold shrink-0">
+            {userInitial}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-white truncate">{user?.full_name || user?.email || "—"}</div>
+            <div className="text-[10px] uppercase tracking-wide text-slate-400">{userRole}</div>
           </div>
         </div>
       </aside>
@@ -109,10 +167,22 @@ export default function Layout() {
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold truncate">{loading ? "Cranmore QA" : project?.name || "Cranmore QA"}</div>
           </div>
-          <div className="h-7 w-7 rounded-full bg-emerald-500 text-slate-900 flex items-center justify-center text-xs font-bold shrink-0">CC</div>
+          <div className="h-7 w-7 rounded-full bg-emerald-500 text-slate-900 flex items-center justify-center text-xs font-bold shrink-0">
+            {userInitial}
+          </div>
         </div>
         <Outlet />
       </main>
+
+      {/* Ask AI floating button — disabled placeholder until Checkpoint 5 */}
+      <button
+        disabled
+        title="Ask AI — coming in Checkpoint 5"
+        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-slate-300 text-slate-500 px-4 py-3 font-semibold text-sm cursor-not-allowed"
+      >
+        <Sparkles size={18} />
+        <span className="hidden sm:inline">Ask AI</span>
+      </button>
     </div>
   );
 }

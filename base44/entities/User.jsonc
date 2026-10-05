@@ -1,17 +1,24 @@
 {
+  "name": "User",
+  "type": "object",
   "properties": {
     "role": {
       "type": "string",
-      "description": "The role of the user in the app",
+      "description": "User role: admin (full access incl. user management), pm (project manager, manage data), trade (subcontractor, scoped to own company), viewer (read-only)",
       "enum": [
         "admin",
-        "user"
-      ]
+        "pm",
+        "trade",
+        "viewer"
+      ],
+      "default": "viewer"
+    },
+    "company_id": {
+      "type": "string",
+      "description": "The company this user belongs to (used for visible_to scoping)"
     }
   },
   "required": [
     "role"
-  ],
-  "name": "User",
-  "type": "object"
+  ]
 }

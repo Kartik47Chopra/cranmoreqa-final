@@ -9,7 +9,11 @@
       "type": "string",
       "default": "#64748b"
     },
-    "trade": {
+    "plan": {
+      "type": "string",
+      "default": "pro"
+    },
+    "logo": {
       "type": "string"
     },
     "is_owner": {
@@ -19,5 +23,23 @@
   },
   "required": [
     "name"
-  ]
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

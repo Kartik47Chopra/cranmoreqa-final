@@ -1,0 +1,54 @@
+{
+  "name": "Activity",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "visi_id": {
+      "type": "string"
+    },
+    "user": {
+      "type": "string"
+    },
+    "text": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "comment",
+        "step",
+        "status",
+        "task",
+        "delete",
+        "restore",
+        "photo",
+        "attachment",
+        "claim",
+        "bulk_create"
+      ]
+    },
+    "created_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "text",
+    "type"
+  ],
+  "rls": {
+    "read": {},
+    "create": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

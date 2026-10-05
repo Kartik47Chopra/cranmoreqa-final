@@ -1,31 +1,35 @@
 import React, { useState } from "react";
-import { ChevronRight, Building2, Box, DoorOpen, Layers } from "lucide-react";
+import { ChevronRight, Building2, Layers, Box, DoorOpen, MapPin } from "lucide-react";
 import { buildLocationTree } from "@/lib/qaUtils";
 
-function typeIcon(type) {
-  if (type === "Building") return Building2;
-  if (type === "Floor") return Layers;
-  if (type === "Apartment") return DoorOpen;
-  return Box;
-}
+const TYPE_ICON = {
+  Building: Building2,
+  Level: Layers,
+  Zone: Box,
+  Unit: DoorOpen,
+  Room: MapPin,
+};
 
 function TreeBranch({ loc, tree, depth, selectedId, onSelect }) {
   const [open, setOpen] = useState(depth < 2);
   const children = tree[loc.id] || [];
   const hasChildren = children.length > 0;
-  const Icon = typeIcon(loc.type);
+  const Icon = TYPE_ICON[loc.type] || MapPin;
   const selected = selectedId === loc.id;
+  const isNA = loc.status === "na";
+
   return (
     <div>
       <div
-        className={`group flex items-center gap-1 rounded-md py-1.5 pr-2 text-sm transition-colors ${
+        className={`group flex items-center gap-1 rounded-md py-1.5 pr-2 text-sm transition-colors cursor-pointer ${
           selected ? "bg-emerald-500/15 text-emerald-300" : "text-slate-300 hover:bg-slate-800/70 hover:text-white"
         }`}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
+        onClick={() => onSelect(loc)}
       >
         {hasChildren ? (
           <button
-            onClick={() => setOpen((o) => !o)}
+            onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
             className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:text-white"
           >
             <ChevronRight size={14} className={`transition-transform ${open ? "rotate-90" : ""}`} />
@@ -33,10 +37,11 @@ function TreeBranch({ loc, tree, depth, selectedId, onSelect }) {
         ) : (
           <span className="h-5 w-5 shrink-0" />
         )}
-        <button onClick={() => onSelect(loc)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-          <Icon size={14} className="shrink-0 opacity-70" />
-          <span className="truncate font-medium">{loc.name}</span>
-        </button>
+        <Icon size={14} className={`shrink-0 ${isNA ? "opacity-30" : "opacity-70"}`} />
+        <span className={`truncate font-medium ${isNA ? "line-through decoration-slate-600 text-slate-500" : ""}`}>{loc.name}</span>
+        {isNA && (
+          <span className="ml-auto shrink-0 text-[9px] font-bold text-slate-500 bg-slate-700/60 rounded px-1 py-px">N/A</span>
+        )}
       </div>
       {hasChildren && open && (
         <div className="ml-3 border-l border-slate-800/60">

@@ -1,61 +1,56 @@
 {
-  "name": "Location",
+  "name": "Document",
   "type": "object",
   "properties": {
     "project_id": {
       "type": "string"
     },
-    "parent_id": {
+    "location_id": {
       "type": "string"
     },
-    "name": {
+    "discipline": {
       "type": "string"
     },
-    "type": {
-      "type": "string",
-      "enum": [
-        "Building",
-        "Level",
-        "Zone",
-        "Unit",
-        "Room"
-      ]
-    },
-    "order": {
-      "type": "number",
-      "default": 0
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "active",
-        "na"
-      ],
-      "default": "active"
-    },
-    "room_no": {
+    "building": {
       "type": "string"
     },
-    "apt_number": {
+    "category": {
       "type": "string"
     },
-    "apt_type": {
+    "floor": {
       "type": "string"
     },
-    "bed_count": {
+    "drawing_no": {
+      "type": "string"
+    },
+    "revision": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "filename": {
+      "type": "string"
+    },
+    "file_uri": {
+      "type": "string"
+    },
+    "content_type": {
+      "type": "string"
+    },
+    "size": {
       "type": "number"
     },
-    "finish": {
+    "uploaded_by_company": {
       "type": "string"
     },
-    "mirrored": {
-      "type": "boolean"
+    "uploaded_at": {
+      "type": "string"
     }
   },
   "required": [
     "project_id",
-    "name",
-    "type"
+    "file_uri"
   ],
   "rls": {
     "read": {},

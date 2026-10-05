@@ -5,6 +5,10 @@
     "name": {
       "type": "string"
     },
+    "revision": {
+      "type": "number",
+      "default": 1
+    },
     "discipline": {
       "type": "string"
     },
@@ -14,22 +18,18 @@
     "system": {
       "type": "string"
     },
-    "trade": {
+    "assignee_company": {
       "type": "string"
-    },
-    "prefix": {
-      "type": "string"
-    },
-    "version": {
-      "type": "number",
-      "default": 1
     },
     "steps": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "title": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
             "type": "string"
           },
           "type": {
@@ -38,12 +38,73 @@
               "inspection",
               "task"
             ]
+          },
+          "assignee_company_id": {
+            "type": "string"
+          },
+          "reviewer_company_id": {
+            "type": "string"
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              }
+            }
           }
-        }
+        },
+        "required": [
+          "id",
+          "label",
+          "type"
+        ]
       }
     }
   },
   "required": [
     "name"
-  ]
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

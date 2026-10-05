@@ -2,16 +2,32 @@
   "name": "Visi",
   "type": "object",
   "properties": {
-    "project_id": {
+    "code": {
       "type": "string"
     },
-    "location_id": {
-      "type": "string"
+    "visi_type": {
+      "type": "string",
+      "enum": [
+        "Inspection",
+        "Task",
+        "Holdpoint"
+      ],
+      "default": "Inspection"
     },
     "template_id": {
       "type": "string"
     },
-    "visi_code": {
+    "template_name": {
+      "type": "string"
+    },
+    "template_revision": {
+      "type": "number",
+      "default": 1
+    },
+    "location_id": {
+      "type": "string"
+    },
+    "project_id": {
       "type": "string"
     },
     "assignee_company_id": {
@@ -26,31 +42,15 @@
         "type": "string"
       }
     },
-    "override_status": {
-      "type": "string",
-      "enum": [
-        "none",
-        "na",
-        "closed",
-        "cant_close",
-        "in_review",
-        "in_dispute"
-      ],
-      "default": "none"
-    },
-    "override_comment": {
-      "type": "string"
-    },
-    "sequence": {
-      "type": "number",
-      "default": 1
-    },
     "steps": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "title": {
+          "step_id": {
+            "type": "string"
+          },
+          "label": {
             "type": "string"
           },
           "type": {
@@ -68,16 +68,108 @@
             ],
             "default": "pending"
           },
-          "completed_at": {
+          "assignee_company_id": {
             "type": "string"
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "attachment_id": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }
     },
-    "closed_at": {
+    "override_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "na",
+        "closed",
+        "cant_close",
+        "in_review",
+        "in_dispute"
+      ],
+      "default": "none"
+    },
+    "override_comment": {
+      "type": "string"
+    },
+    "system": {
+      "type": "string"
+    },
+    "stage": {
+      "type": "string"
+    },
+    "discipline": {
+      "type": "string"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "door_id": {
+      "type": "string"
+    },
+    "skirting_type": {
+      "type": "string"
+    },
+    "fixture_label": {
+      "type": "string"
+    },
+    "document_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "created_by": {
+      "type": "string"
+    },
+    "created_by_company": {
+      "type": "string"
+    },
+    "created_at": {
       "type": "string"
     },
     "last_updated": {
+      "type": "string"
+    },
+    "closed_at": {
+      "type": "string"
+    },
+    "closed_by": {
+      "type": "string"
+    },
+    "claimed": {
+      "type": "boolean",
+      "default": false
+    },
+    "claimed_at": {
+      "type": "string"
+    },
+    "claimed_by": {
+      "type": "string"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "deleted_at": {
+      "type": "string"
+    },
+    "deleted_by": {
       "type": "string"
     }
   },
@@ -85,5 +177,99 @@
     "project_id",
     "location_id",
     "template_id"
-  ]
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        },
+        {
+          "data.assignee_company_id": "{{user.data.company_id}}"
+        },
+        {
+          "data.reviewer_company_id": "{{user.data.company_id}}"
+        },
+        {
+          "data.visible_to": "{{user.data.company_id}}"
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "trade"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        },
+        {
+          "$and": [
+            {
+              "$or": [
+                {
+                  "data.assignee_company_id": "{{user.data.company_id}}"
+                },
+                {
+                  "data.reviewer_company_id": "{{user.data.company_id}}"
+                },
+                {
+                  "data.visible_to": "{{user.data.company_id}}"
+                }
+              ]
+            },
+            {
+              "user_condition": {
+                "role": "trade"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        }
+      ]
+    }
+  }
 }

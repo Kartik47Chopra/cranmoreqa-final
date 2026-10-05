@@ -8,14 +8,60 @@
     "address": {
       "type": "string"
     },
-    "description": {
+    "drawing_set": {
       "type": "string"
     },
-    "owner_company_id": {
+    "company_id": {
       "type": "string"
+    },
+    "member_company_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "accounts_email": {
+      "type": "string",
+      "default": ""
     }
   },
   "required": [
     "name"
-  ]
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

@@ -5,13 +5,34 @@
     "visi_id": {
       "type": "string"
     },
-    "file_url": {
+    "location_id": {
       "type": "string"
     },
-    "title": {
+    "step_id": {
       "type": "string"
     },
-    "description": {
+    "requirement_id": {
+      "type": "string"
+    },
+    "file_uri": {
+      "type": "string"
+    },
+    "original_filename": {
+      "type": "string"
+    },
+    "content_type": {
+      "type": "string"
+    },
+    "size": {
+      "type": "number"
+    },
+    "uploaded_by": {
+      "type": "string"
+    },
+    "uploaded_by_company": {
+      "type": "string"
+    },
+    "uploaded_at": {
       "type": "string"
     },
     "captured_at": {
@@ -25,10 +46,64 @@
     },
     "address": {
       "type": "string"
+    },
+    "discipline": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "deleted_at": {
+      "type": "string"
+    },
+    "deleted_by": {
+      "type": "string"
     }
   },
   "required": [
     "visi_id",
-    "file_url"
-  ]
+    "file_uri"
+  ],
+  "rls": {
+    "read": {},
+    "create": {},
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        },
+        {
+          "created_by_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        }
+      ]
+    }
+  }
 }

@@ -5,28 +5,64 @@
     "project_id": {
       "type": "string"
     },
-    "location_id": {
-      "type": "string"
-    },
     "name": {
       "type": "string"
     },
-    "due_date": {
+    "target_date": {
       "type": "string",
       "format": "date"
     },
-    "status": {
-      "type": "string",
-      "enum": [
-        "pending",
-        "in_progress",
-        "complete"
-      ],
-      "default": "pending"
+    "visi_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "location_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [
     "project_id",
     "name"
-  ]
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

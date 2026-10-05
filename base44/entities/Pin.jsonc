@@ -1,0 +1,62 @@
+{
+  "name": "Pin",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "location_id": {
+      "type": "string"
+    },
+    "plan_doc_id": {
+      "type": "string"
+    },
+    "x": {
+      "type": "number"
+    },
+    "y": {
+      "type": "number"
+    },
+    "note": {
+      "type": "string"
+    },
+    "photo_path": {
+      "type": "string"
+    },
+    "photo_title": {
+      "type": "string"
+    },
+    "created_by": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "location_id",
+    "x",
+    "y"
+  ],
+  "rls": {
+    "read": {},
+    "create": {},
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        },
+        {
+          "created_by_id": "{{user.id}}"
+        }
+      ]
+    }
+  }
+}
