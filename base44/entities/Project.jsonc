@@ -1,0 +1,21 @@
+{
+  "name": "Project",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "owner_company_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

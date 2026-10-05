@@ -1,0 +1,49 @@
+{
+  "name": "Template",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "discipline": {
+      "type": "string"
+    },
+    "stage": {
+      "type": "string"
+    },
+    "system": {
+      "type": "string"
+    },
+    "trade": {
+      "type": "string"
+    },
+    "prefix": {
+      "type": "string"
+    },
+    "version": {
+      "type": "number",
+      "default": 1
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "inspection",
+              "task"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

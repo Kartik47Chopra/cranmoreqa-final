@@ -1,0 +1,34 @@
+{
+  "name": "Attachment",
+  "type": "object",
+  "properties": {
+    "visi_id": {
+      "type": "string"
+    },
+    "file_url": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "captured_at": {
+      "type": "string"
+    },
+    "lat": {
+      "type": "number"
+    },
+    "lng": {
+      "type": "number"
+    },
+    "address": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "visi_id",
+    "file_url"
+  ]
+}

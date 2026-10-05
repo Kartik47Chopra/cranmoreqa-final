@@ -1,0 +1,32 @@
+{
+  "name": "Milestone",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "location_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "in_progress",
+        "complete"
+      ],
+      "default": "pending"
+    }
+  },
+  "required": [
+    "project_id",
+    "name"
+  ]
+}

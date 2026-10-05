@@ -1,0 +1,89 @@
+{
+  "name": "Visi",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "location_id": {
+      "type": "string"
+    },
+    "template_id": {
+      "type": "string"
+    },
+    "visi_code": {
+      "type": "string"
+    },
+    "assignee_company_id": {
+      "type": "string"
+    },
+    "reviewer_company_id": {
+      "type": "string"
+    },
+    "visible_to": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "override_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "na",
+        "closed",
+        "cant_close",
+        "in_review",
+        "in_dispute"
+      ],
+      "default": "none"
+    },
+    "override_comment": {
+      "type": "string"
+    },
+    "sequence": {
+      "type": "number",
+      "default": 1
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "inspection",
+              "task"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "complete"
+            ],
+            "default": "pending"
+          },
+          "completed_at": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "closed_at": {
+      "type": "string"
+    },
+    "last_updated": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "project_id",
+    "location_id",
+    "template_id"
+  ]
+}

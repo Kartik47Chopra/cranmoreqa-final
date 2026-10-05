@@ -1,0 +1,41 @@
+{
+  "name": "Location",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "parent_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "Building",
+        "Floor",
+        "Room",
+        "Apartment",
+        "Area"
+      ]
+    },
+    "path": {
+      "type": "string"
+    },
+    "sort_order": {
+      "type": "number",
+      "default": 0
+    },
+    "wet": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "project_id",
+    "name",
+    "type"
+  ]
+}

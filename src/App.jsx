@@ -6,6 +6,12 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
+import { QaDataProvider } from '@/lib/QaDataContext';
+import Layout from '@/components/Layout';
+import Dashboard from '@/pages/Dashboard';
+import Tracker from '@/pages/Tracker';
+import Visis from '@/pages/Visis';
+import LocationDetail from '@/pages/LocationDetail';
 // Add page imports here
 
 const AuthenticatedApp = () => {
@@ -33,10 +39,18 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
-    <Routes>
-      {/* Add your page Route elements here */}
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+    <QaDataProvider>
+      <Routes>
+        {/* Add your page Route elements here */}
+        <Route element={<Layout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/tracker" element={<Tracker />} />
+          <Route path="/visis" element={<Visis />} />
+          <Route path="/location/:id" element={<LocationDetail />} />
+        </Route>
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+    </QaDataProvider>
   );
 };
 

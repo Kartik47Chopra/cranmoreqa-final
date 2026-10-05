@@ -1,0 +1,23 @@
+{
+  "name": "Company",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string",
+      "default": "#64748b"
+    },
+    "trade": {
+      "type": "string"
+    },
+    "is_owner": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
