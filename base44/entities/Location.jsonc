@@ -50,6 +50,16 @@
     },
     "mirrored": {
       "type": "boolean"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "deleted_at": {
+      "type": "string"
+    },
+    "deleted_by": {
+      "type": "string"
     }
   },
   "required": [

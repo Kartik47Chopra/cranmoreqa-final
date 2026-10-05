@@ -48,6 +48,16 @@
     },
     "completed_at": {
       "type": "string"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "deleted_at": {
+      "type": "string"
+    },
+    "deleted_by": {
+      "type": "string"
     }
   },
   "required": [
@@ -75,7 +85,20 @@
         }
       ]
     },
-    "create": {},
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "pm"
+          }
+        }
+      ]
+    },
     "update": {
       "$or": [
         {
@@ -94,21 +117,9 @@
       ]
     },
     "delete": {
-      "$or": [
-        {
-          "data.assigned_by": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "pm"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
