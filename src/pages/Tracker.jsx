@@ -124,7 +124,7 @@ function FloorGroup({ floor, rooms, templates, visiMap }) {
         </td>
       </tr>
       {rooms.map((r) => (
-        <tr key={r.id} className="hover:bg-amber-50/40">
+        <tr key={r.id} className="hover:bg-emerald-50/40">
           <td className="sticky left-0 z-10 bg-white px-3 py-2 text-sm font-medium text-slate-700 border-b border-slate-100">
             <div className="truncate" title={r.name}>{r.name}</div>
             <div className="text-[10px] text-slate-400">{r.wet ? "Wet area" : ""}</div>

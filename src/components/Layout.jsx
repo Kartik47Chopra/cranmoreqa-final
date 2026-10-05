@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Grid3x3, ListChecks, Search, HardHat, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Grid3x3, ListChecks, Search, ChevronDown, Building, X, Menu } from "lucide-react";
 import { useQaData } from "@/lib/QaDataContext";
 import LocationTree from "@/components/LocationTree";
+import TreeLogo from "@/components/TreeLogo";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -12,77 +13,36 @@ const NAV = [
 
 export default function Layout() {
   const { project, locations, loading } = useQaData();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const navigate = useNavigate();
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-800">
+    <div className="flex h-screen w-screen overflow-hidden bg-background relative">
+      {drawerOpen && (
+        <div className="md:hidden fixed inset-0 z-30 bg-slate-900/50 backdrop-blur-[2px]" onClick={() => setDrawerOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <aside className={`flex shrink-0 flex-col bg-slate-900 text-slate-300 transition-all ${sidebarOpen ? "w-[260px]" : "w-0"}`}>
-        <div className="flex items-center gap-2.5 px-4 py-4 border-b border-slate-800">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-slate-900">
-            <HardHat size={20} strokeWidth={2.2} />
-          </div>
-          <div className="min-w-0">
-            <div className="font-display text-base font-bold uppercase tracking-tight text-white leading-none">Cranmore QA</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Carpenters Quality</div>
-          </div>
-        </div>
-
-        {/* Project switcher */}
-        <div className="px-3 py-3 border-b border-slate-800">
-          <button className="flex w-full items-center justify-between rounded-lg bg-slate-800/60 px-3 py-2 text-left hover:bg-slate-800">
-            <div className="min-w-0">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Project</div>
-              <div className="truncate text-sm font-semibold text-white">{loading ? "Loading…" : project?.name || "—"}</div>
+      <aside className={`fixed md:static inset-y-0 left-0 z-40 w-[280px] shrink-0 bg-[#0F172A] text-slate-200 flex flex-col border-r border-slate-800 transition-transform duration-200 ${drawerOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
+        <div className="px-4 py-4 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-emerald-700 to-emerald-900 flex items-center justify-center shadow-inner shrink-0">
+              <TreeLogo size={22} />
             </div>
-            <ChevronDown size={16} className="shrink-0 text-slate-500" />
+            <div>
+              <div className="font-display font-bold text-xl leading-none tracking-wide text-white">Cranmore</div>
+              <div className="text-[10px] uppercase tracking-[0.28em] text-emerald-400">QA</div>
+            </div>
+          </div>
+          <button className="md:hidden p-1.5 rounded-md hover:bg-slate-800 text-slate-400" onClick={() => setDrawerOpen(false)} aria-label="Close menu">
+            <X size={18} />
           </button>
         </div>
 
-        {/* Nav */}
-        <nav className="px-2 py-2 space-y-0.5">
-          {NAV.map((n) => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              end={n.end}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive ? "bg-amber-500 text-slate-900" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                }`
-              }
-            >
-              <n.icon size={16} />
-              {n.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* Location tree */}
-        <div className="mt-2 flex-1 overflow-y-auto px-2 pb-4">
-          <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Location Tree</div>
-          {loading ? (
-            <div className="px-2 py-2 text-xs text-slate-500">Loading…</div>
-          ) : (
-            <LocationTree locations={locations} onSelect={(l) => navigate(`/location/${l.id}`)} />
-          )}
-        </div>
-      </aside>
-
-      {/* Main */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-3 md:px-6">
-          <button
-            onClick={() => setSidebarOpen((o) => !o)}
-            className="rounded-md border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
-            title="Toggle sidebar"
-          >
-            <LayoutDashboard size={16} />
-          </button>
-          <div className="relative w-48 max-w-[40%] md:w-72">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        {/* Search */}
+        <div className="px-3 pt-3">
+          <div className="relative w-full">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               placeholder="Search locations…"
               onChange={(e) => {
@@ -91,19 +51,68 @@ export default function Layout() {
                 const match = locations.find((l) => l.name.toLowerCase().includes(q));
                 if (match) navigate(`/location/${match.id}`);
               }}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full rounded-md bg-slate-800 hover:bg-slate-700 focus:bg-slate-700 pl-9 pr-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
             />
           </div>
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <span className="hidden md:inline font-mono text-xs">v1.0</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">CC</div>
-          </div>
-        </header>
+        </div>
 
-        <main className="flex-1 overflow-y-auto">
-          <Outlet />
-        </main>
-      </div>
+        {/* Project switcher */}
+        <div className="px-3 py-3 border-b border-slate-800 space-y-2">
+          <div className="flex items-center gap-2 text-xs text-slate-400 px-1">
+            <Building size={13} className="text-emerald-400" />
+            <span className="truncate">{loading ? "Loading…" : project?.name || "Cranmore Carpenters"}</span>
+          </div>
+          <button className="w-full flex items-center justify-between gap-2 rounded-md bg-slate-800 hover:bg-slate-700 px-3 py-2 text-sm font-semibold transition-colors">
+            <span className="truncate text-white">{loading ? "Loading…" : project?.name || "Select project"}</span>
+            <ChevronDown size={15} className="text-slate-400" />
+          </button>
+        </div>
+
+        {/* Nav + Location tree */}
+        <div className="flex-1 overflow-y-auto sidebar-scroll">
+          <nav className="px-2 py-2 space-y-0.5">
+            {NAV.map((n) => (
+              <NavLink
+                key={n.to}
+                to={n.to}
+                end={n.end}
+                onClick={() => setDrawerOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive ? "bg-emerald-500 text-slate-900" : "text-slate-300 hover:bg-slate-800"
+                  }`
+                }
+              >
+                <n.icon size={16} />
+                {n.label}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="px-2 pb-4 mt-1">
+            <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Locations</div>
+            {loading ? (
+              <div className="px-3 py-2 text-xs text-slate-500">Loading…</div>
+            ) : (
+              <LocationTree locations={locations} onSelect={(l) => { navigate(`/location/${l.id}`); setDrawerOpen(false); }} />
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <main className="flex-1 overflow-hidden flex flex-col min-w-0">
+        <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-[#0F172A] text-white shrink-0">
+          <button onClick={() => setDrawerOpen(true)} aria-label="Open menu" className="p-1.5 rounded-md hover:bg-slate-800">
+            <Menu size={20} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold truncate">{loading ? "Cranmore QA" : project?.name || "Cranmore QA"}</div>
+          </div>
+          <div className="h-7 w-7 rounded-full bg-emerald-500 text-slate-900 flex items-center justify-center text-xs font-bold shrink-0">CC</div>
+        </div>
+        <Outlet />
+      </main>
     </div>
   );
 }

@@ -51,7 +51,7 @@ export default function LocationDetail() {
       </button>
 
       <header className="mb-5">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-600">{loc.type}</div>
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-600">{loc.type}</div>
         <h1 className="font-display text-2xl font-bold uppercase tracking-tight text-slate-900">{loc.name}</h1>
         <p className="mt-1 text-sm text-slate-500">{loc.path}</p>
         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
@@ -73,7 +73,7 @@ export default function LocationDetail() {
           <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Contained locations ({children.length})</h2>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
             {children.map((c) => (
-              <button key={c.id} onClick={() => navigate(`/location/${c.id}`)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:border-amber-300 hover:bg-amber-50/40">
+              <button key={c.id} onClick={() => navigate(`/location/${c.id}`)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/40">
                 {c.name}
               </button>
             ))}
@@ -117,7 +117,7 @@ export default function LocationDetail() {
                 const tpl = templateMap[v.template_id];
                 const { done, total } = checklistProgress(v);
                 return (
-                  <tr key={v.id} onClick={() => setActive(v)} className="cursor-pointer border-t border-slate-100 hover:bg-amber-50/40">
+                  <tr key={v.id} onClick={() => setActive(v)} className="cursor-pointer border-t border-slate-100 hover:bg-emerald-50/40">
                     <td className="px-3 py-2.5 font-mono text-xs font-bold text-slate-900">{v.visi_code}</td>
                     <td className="px-3 py-2.5 font-medium text-slate-700">{tpl?.name}</td>
                     <td className="px-3 py-2.5 text-center font-mono text-xs text-slate-600">{done}/{total}</td>

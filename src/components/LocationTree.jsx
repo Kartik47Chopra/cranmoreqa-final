@@ -19,7 +19,7 @@ function TreeBranch({ loc, tree, depth, selectedId, onSelect }) {
     <div>
       <div
         className={`group flex items-center gap-1 rounded-md py-1.5 pr-2 text-sm transition-colors ${
-          selected ? "bg-amber-500/15 text-amber-300" : "text-slate-300 hover:bg-slate-800/70 hover:text-white"
+          selected ? "bg-emerald-500/15 text-emerald-300" : "text-slate-300 hover:bg-slate-800/70 hover:text-white"
         }`}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >

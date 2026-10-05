@@ -56,7 +56,7 @@ export default function Visis() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search code or location…"
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
             />
           </div>
           <Select value={tplFilter} onChange={setTplFilter} options={[{ value: "all", label: "All templates" }, ...Object.values(templateMap).map((t) => ({ value: t.id, label: t.name }))]} />
@@ -94,7 +94,7 @@ export default function Visis() {
                 const assignee = companyMap[v.assignee_company_id];
                 const { done, total } = checklistProgress(v);
                 return (
-                  <tr key={v.id} onClick={() => setActive(v)} className="cursor-pointer border-t border-slate-100 hover:bg-amber-50/40">
+                  <tr key={v.id} onClick={() => setActive(v)} className="cursor-pointer border-t border-slate-100 hover:bg-emerald-50/40">
                     <td className="px-3 py-2.5 font-mono text-xs font-bold text-slate-900">{v.visi_code}</td>
                     <td className="px-3 py-2.5 font-medium text-slate-700">{tpl?.name}</td>
                     <td className="px-3 py-2.5 text-slate-600">{loc?.name}</td>
@@ -127,7 +127,7 @@ function Select({ value, onChange, options }) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-lg border border-slate-200 bg-white py-2 pl-3 pr-8 text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-400"
+      className="rounded-lg border border-slate-200 bg-white py-2 pl-3 pr-8 text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-400"
     >
       {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
