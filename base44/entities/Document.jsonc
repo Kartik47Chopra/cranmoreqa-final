@@ -46,6 +46,16 @@
     },
     "uploaded_at": {
       "type": "string"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "deleted_at": {
+      "type": "string"
+    },
+    "deleted_by": {
+      "type": "string"
     }
   },
   "required": [
@@ -64,6 +74,11 @@
         {
           "user_condition": {
             "role": "pm"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "trade"
           }
         }
       ]
