@@ -25,6 +25,7 @@ import Report from '@/pages/Report';
 import ProjectSetup from '@/pages/ProjectSetup';
 import UserManagement from '@/pages/UserManagement';
 import LocationDetail from '@/pages/LocationDetail';
+import InspectionDetail from '@/pages/InspectionDetail';
 
 function QaLayout() {
   return (
@@ -69,6 +70,7 @@ const AppRoutes = () => {
           <Route path="/setup" element={<ProjectSetup />} />
           <Route path="/users" element={<UserManagement />} />
           <Route path="/location/:locationId" element={<LocationDetail />} />
+          <Route path="/inspection/:visiId" element={<InspectionDetail />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />

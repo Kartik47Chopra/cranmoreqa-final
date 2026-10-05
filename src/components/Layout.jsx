@@ -177,7 +177,7 @@ export default function Layout() {
       {/* Ask AI floating button — disabled placeholder until Checkpoint 5 */}
       <button
         disabled
-        title="Ask AI — coming in Checkpoint 5"
+        title="Ask AI"
         className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-slate-300 text-slate-500 px-4 py-3 font-semibold text-sm cursor-not-allowed"
       >
         <Sparkles size={18} />
