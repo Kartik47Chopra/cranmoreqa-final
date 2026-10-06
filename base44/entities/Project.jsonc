@@ -33,6 +33,29 @@
     },
     "deleted_by": {
       "type": "string"
+    },
+    "original_id": {
+      "type": "string"
+    },
+    "saved_file_index": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "upload_filename": {
+            "type": "string"
+          },
+          "file_uri": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          }
+        }
+      }
     }
   },
   "required": [

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQaData } from "@/lib/QaDataContext";
 import { useAuth } from "@/lib/AuthContext";
-import { logActivity } from "@/lib/activityLog";
+import { useQueryClient } from '@tanstack/react-query';
+import { readAll } from '@/components/qa/paging';
 import { Download, Eraser, Loader2, FileJson, FileSpreadsheet } from "lucide-react";
 
 export default function DataTools() {
@@ -13,40 +14,44 @@ export default function DataTools() {
   const [clearing, setClearing] = useState(false);
   const [counts, setCounts] = useState({});
   const [exporting, setExporting] = useState(null);
+  const [before, setBefore] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [resetError, setResetError] = useState('');
+  const queryClient = useQueryClient();
 
   async function loadCounts() {
-    const ents = ["Visi", "Location", "Document", "Attachment", "Task", "Activity"];
-    const c = {};
-    for (const e of ents) {
-      try { const r = await base44.entities[e].filter({ project_id: project?.id }); c[e] = (Array.isArray(r) ? r : []).length; } catch { c[e] = 0; }
-    }
-    setCounts(c);
+    const response = await base44.functions.invoke('resetImportedData', { action: 'counts' });
+    setCounts(response.data.counts);
   }
-  useEffect(() => { if (project?.id) loadCounts(); }, [project?.id]);
+  useEffect(() => { if (user?.role === 'admin') loadCounts(); }, [user?.role]);
 
   async function clearSample() {
-    if (confirmText !== "RESET") return;
-    setClearing(true);
+    if (confirmText !== 'RESET' || clearing) return;
+    setClearing(true); setResetError(''); setProgress(0);
     try {
-      // Soft-delete all Visis, Locations, Documents, Attachments, Tasks, Activity
-      // Keep users, templates, and the project record
-      await base44.entities.Visi.updateMany({ project_id: project.id }, { $set: { is_deleted: true, deleted_at: new Date().toISOString() } });
-      await base44.entities.Location.updateMany({ project_id: project.id }, { $set: { is_deleted: true, deleted_at: new Date().toISOString() } });
-      await base44.entities.Document.updateMany({ project_id: project.id }, { $set: { is_deleted: true, deleted_at: new Date().toISOString() } });
-      await base44.entities.Attachment.updateMany({ project_id: project.id }, { $set: { is_deleted: true, deleted_at: new Date().toISOString() } });
-      await base44.entities.Task.updateMany({ project_id: project.id }, { $set: { is_deleted: true, deleted_at: new Date().toISOString() } });
-      await base44.entities.Activity.deleteMany({ project_id: project.id });
-      logActivity({ project_id: project.id, user: user?.full_name || user?.email, text: "Cleared all sample data", type: "delete" });
-      setShowClear(false); setConfirmText("");
-      loadCounts(); reload();
-    } catch (e) { console.error(e); }
-    setClearing(false);
+      const initial = (await base44.functions.invoke('resetImportedData', { action: 'counts' })).data.counts;
+      setBefore(initial);
+      const total = Object.values(initial).reduce((s, n) => s + n, 0);
+      for (let pass = 0; pass < 100; pass++) {
+        const result = (await base44.functions.invoke('resetImportedData', { action: 'full', confirm: 'RESET' })).data;
+        if (result.error) throw new Error(result.error);
+        setCounts(result.after);
+        const remaining = Object.values(result.after).reduce((s, n) => s + n, 0);
+        setProgress(total ? Math.round(100 * (total - remaining) / total) : 100);
+        if (result.done) break;
+        if (pass === 99) setResetError('Some records remain. Press Retry.');
+      }
+      queryClient.clear();
+      Object.keys(localStorage).filter(k => /cranmore|qa_|import/i.test(k) && k !== 'cranmore_selected_project').forEach(k => localStorage.removeItem(k));
+      await reload(); window.dispatchEvent(new Event('qa-data-reset')); await loadCounts();
+    } catch (error) { setResetError(error.message); }
+    finally { setClearing(false); }
   }
 
   async function exportEntity(entityName, format) {
     setExporting(`${entityName}-${format}`);
     try {
-      const records = await base44.entities[entityName].filter({ project_id: project.id });
+      const records = await readAll(entityName, ['Company', 'Template'].includes(entityName) ? {} : { project_id: project.id });
       const data = Array.isArray(records) ? records : [];
       if (format === "json") {
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -94,15 +99,18 @@ export default function DataTools() {
         </div>
       </div>
 
-      {/* Clear Sample Data */}
+      {/* Reset imported data */}
       <div className="rounded-lg border border-red-200 bg-red-50 p-4">
         <h3 className="text-sm font-bold uppercase tracking-wide text-red-600 mb-2 flex items-center gap-2">
-          <Eraser size={15} /> Clear Sample Data
+          <Eraser size={15} /> Reset imported data
         </h3>
-        <p className="text-sm text-red-500 mb-3">Removes all Visis, locations, tasks, documents, photos and activity but KEEPS users, templates and the project record. This cannot be undone.</p>
+        <p className="text-sm text-red-500 mb-3">Permanently deletes all imported records, including companies and templates. Keeps users, the project and files already in storage.</p>
+        {before && <div className="text-xs mb-3">{Object.keys(counts).map(k => <div key={k}>{k}: before {before[k]} → after {counts[k]}</div>)}</div>}
+        {clearing && <progress className="w-full" value={progress} max={100} />}
+        {resetError && <p role="alert" className="text-destructive">{resetError}</p>}
         {!showClear ? (
           <button onClick={() => setShowClear(true)} className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50">
-            Clear Sample Data
+            Reset imported data
           </button>
         ) : (
           <div className="space-y-3">
@@ -117,7 +125,7 @@ export default function DataTools() {
             <div className="flex gap-2">
               <button onClick={() => { setShowClear(false); setConfirmText(""); }} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
               <button onClick={clearSample} disabled={confirmText !== "RESET" || clearing} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
-                {clearing ? "Clearing..." : "Clear All Data"}
+                {clearing ? 'Resetting...' : before && Object.values(counts).some(n => n > 0) ? 'Retry' : 'Reset imported data'}
               </button>
             </div>
           </div>

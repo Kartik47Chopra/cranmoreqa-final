@@ -1,0 +1,53 @@
+{
+  "name": "ImportBatch",
+  "type": "object",
+  "properties": {
+    "original_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "entity_name": {
+      "type": "string"
+    },
+    "filename": {
+      "type": "string"
+    },
+    "record_count": {
+      "type": "number"
+    },
+    "started_at": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "original_id",
+    "entity_name"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
