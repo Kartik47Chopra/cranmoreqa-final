@@ -4,8 +4,7 @@ import { useQaData } from "@/lib/QaDataContext";
 import { useAuth } from "@/lib/AuthContext";
 import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
-import { statusBucket, checklistProgress, pct } from "@/lib/qaUtils";
-import { FileBarChart, FileSpreadsheet, Download, Printer, Loader2, ChevronDown, ChevronUp, Mail } from "lucide-react";
+import { FileBarChart, FileSpreadsheet, FileText, Download, Printer, Loader2, ChevronDown, ChevronUp, Mail, CheckCircle2, AlertTriangle } from "lucide-react";
 
 export default function Report() {
   const { project, locations, locationMap } = useQaData();
@@ -17,6 +16,10 @@ export default function Report() {
   const [claim, setClaim] = useState({ from: "", to: "", building: "", trade: "", include: "both", unclaimed: false });
   const [claimPreview, setClaimPreview] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState(null);
+  const [showClaimStep, setShowClaimStep] = useState(false);
+  const [claiming, setClaiming] = useState(false);
 
   useEffect(() => {
     if (!project?.id) return;
@@ -46,6 +49,47 @@ export default function Report() {
       setClaimPreview({ total: items.length, completed: items.filter((i) => i.bucket === "completed").length, in_progress: items.filter((i) => i.bucket === "in_progress").length, items });
     } catch (e) { console.error(e); }
     setGenerating(false);
+  }
+
+  async function downloadPdf(isClaim = false) {
+    setPdfLoading(true); setPdfError(null);
+    try {
+      const params = isClaim ? {
+        projectId: project.id, projectName: project.name,
+        building: claim.building || "all", trade: claim.trade || "all",
+        dateFrom: claim.from || null, dateTo: claim.to || null,
+        include: claim.include, onlyUnclaimed: claim.unclaimed,
+      } : {
+        projectId: project.id, projectName: project.name,
+        building: "all", trade: "all", include: "both", onlyUnclaimed: false,
+      };
+      const res = await base44.functions.invoke("generatePdf", params);
+      if (res.data?.error) { setPdfError(res.data.error); }
+      else {
+        const blob = new Blob([res.data], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Progress-Claim_${project.name.replace(/\s+/g, "-")}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (e) { setPdfError(e.message || "Failed to generate PDF. Please retry."); }
+    setPdfLoading(false);
+  }
+
+  async function markClaimed() {
+    if (!claimPreview || claiming) return;
+    setClaiming(true);
+    try {
+      const items = claimPreview.items || [];
+      const claimName = `Claim ${new Date().toLocaleDateString("en-AU")}`;
+      await base44.entities.Visi.bulkUpdate(items.map((v) => ({
+        id: v.id, claimed: true, claimed_at: new Date().toISOString(), claimed_in: claimName,
+      })));
+      setShowClaimStep(false);
+    } catch (e) { console.error(e); }
+    setClaiming(false);
   }
 
   function exportCSV() {
@@ -85,6 +129,9 @@ export default function Report() {
       actions={
         <div className="flex flex-wrap gap-2">
           <button onClick={exportCSV} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"><FileSpreadsheet size={15} /> Excel</button>
+          <button onClick={() => downloadPdf(false)} disabled={pdfLoading} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+            {pdfLoading ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />} Download PDF
+          </button>
           <button onClick={() => window.print()} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"><Printer size={15} /> Print</button>
           <button onClick={() => setShowClaim(true)} className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"><Download size={15} /> Progress Claim</button>
         </div>
@@ -193,6 +240,12 @@ export default function Report() {
               <input type="checkbox" checked={claim.unclaimed} onChange={(e) => setClaim({ ...claim, unclaimed: e.target.checked })} className="rounded" />
               Only items not yet claimed
             </label>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              <button onClick={() => setClaim({ ...claim, from: "", to: "" })} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">All time</button>
+              <button onClick={() => { const d = new Date(); setClaim({ ...claim, from: d.toISOString().slice(0, 10), to: d.toISOString().slice(0, 10) }); }} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">This week</button>
+              <button onClick={() => { const d = new Date(); const first = new Date(d.getFullYear(), d.getMonth(), 1); setClaim({ ...claim, from: first.toISOString().slice(0, 10), to: d.toISOString().slice(0, 10) }); }} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">This month</button>
+              <button onClick={() => { const d = new Date(); const past = new Date(d.getTime() - 7 * 86400000); setClaim({ ...claim, from: past.toISOString().slice(0, 10), to: d.toISOString().slice(0, 10) }); }} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">Last 7 days</button>
+            </div>
             <button onClick={generateClaimPreview} disabled={generating} className="w-full rounded-lg border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 mb-3">
               {generating ? "Checking..." : "Check matches"}
             </button>
@@ -205,10 +258,32 @@ export default function Report() {
                 )}
               </div>
             )}
+            {pdfError && <div className="rounded-lg bg-red-50 border border-red-200 p-3 mb-3 text-sm text-red-600 flex items-center gap-2"><AlertTriangle size={15} /> {pdfError} <button onClick={() => downloadPdf(true)} className="ml-auto underline">Retry</button></div>}
             <div className="flex gap-2">
               <button onClick={() => setShowClaim(false)} className="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
-              <button disabled={!claimPreview || claimPreview.total === 0} className="flex-1 rounded-lg bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Download PDF</button>
+              <button onClick={() => downloadPdf(true)} disabled={!claimPreview || claimPreview.total === 0 || pdfLoading} className="flex-1 rounded-lg bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+                {pdfLoading ? <Loader2 size={15} className="animate-spin mx-auto" /> : "Download PDF"}
+              </button>
             </div>
+            {claimPreview && claimPreview.total > 0 && (user?.role === "admin" || user?.role === "pm") && (
+              <div className="mt-3 border-t border-slate-100 pt-3">
+                {!showClaimStep ? (
+                  <button onClick={() => setShowClaimStep(true)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">
+                    <CheckCircle2 size={15} /> Mark these items as claimed?
+                  </button>
+                ) : (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <p className="text-sm text-emerald-700 mb-2">Mark {claimPreview.total} items as claimed? This adds a "Claimed" badge to each. Admin can reverse it.</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowClaimStep(false)} className="flex-1 rounded-lg border border-slate-200 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+                      <button onClick={markClaimed} disabled={claiming} className="flex-1 rounded-lg bg-emerald-600 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+                        {claiming ? "Marking..." : "Confirm"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {project.accounts_email ? (
               <button className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
                 <Mail size={15} /> Email to accounts

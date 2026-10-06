@@ -6,7 +6,7 @@ import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import RoleGate from "@/components/RoleGate";
 import { logActivity } from "@/lib/activityLog";
-import { Settings, Building2, FileText, Upload, Trash2, RotateCcw, Plus, Save, Loader2, Eraser, Database } from "lucide-react";
+import { Settings, Building2, FileText, Upload, Trash2, RotateCcw, Plus, Save, Loader2, Database } from "lucide-react";
 import ImportTool from "@/components/ImportTool";
 import DataTools from "@/components/DataTools";
 

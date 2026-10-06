@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQaData } from "@/lib/QaDataContext";
 import { useAuth } from "@/lib/AuthContext";
 import { logActivity } from "@/lib/activityLog";
-import { Download, Trash2, Eraser, Loader2, FileJson, FileSpreadsheet, Archive } from "lucide-react";
+import { Download, Eraser, Loader2, FileJson, FileSpreadsheet } from "lucide-react";
 
 export default function DataTools() {
   const { project, reload } = useQaData();
