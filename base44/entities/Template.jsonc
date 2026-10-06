@@ -9,6 +9,9 @@
       "type": "number",
       "default": 1
     },
+    "trade": {
+      "type": "string"
+    },
     "discipline": {
       "type": "string"
     },
@@ -19,6 +22,12 @@
       "type": "string"
     },
     "assignee_company": {
+      "type": "string"
+    },
+    "original_id": {
+      "type": "string"
+    },
+    "import_batch_id": {
       "type": "string"
     },
     "steps": {

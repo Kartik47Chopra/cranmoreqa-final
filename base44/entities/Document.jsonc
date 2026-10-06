@@ -32,6 +32,9 @@
     "filename": {
       "type": "string"
     },
+    "upload_filename": {
+      "type": "string"
+    },
     "file_uri": {
       "type": "string"
     },
@@ -47,6 +50,12 @@
     "uploaded_at": {
       "type": "string"
     },
+    "original_id": {
+      "type": "string"
+    },
+    "import_batch_id": {
+      "type": "string"
+    },
     "is_deleted": {
       "type": "boolean",
       "default": false
@@ -59,8 +68,7 @@
     }
   },
   "required": [
-    "project_id",
-    "file_uri"
+    "project_id"
   ],
   "rls": {
     "read": {},

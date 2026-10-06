@@ -51,6 +51,12 @@
     "mirrored": {
       "type": "boolean"
     },
+    "original_id": {
+      "type": "string"
+    },
+    "import_batch_id": {
+      "type": "string"
+    },
     "is_deleted": {
       "type": "boolean",
       "default": false

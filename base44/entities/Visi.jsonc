@@ -42,6 +42,9 @@
         "type": "string"
       }
     },
+    "trade": {
+      "type": "string"
+    },
     "steps": {
       "type": "array",
       "items": {
@@ -69,6 +72,12 @@
             "default": "pending"
           },
           "assignee_company_id": {
+            "type": "string"
+          },
+          "completed_at": {
+            "type": "string"
+          },
+          "completed_by": {
             "type": "string"
           },
           "requirements": {
@@ -159,7 +168,16 @@
     "claimed_at": {
       "type": "string"
     },
+    "claimed_in": {
+      "type": "string"
+    },
     "claimed_by": {
+      "type": "string"
+    },
+    "original_id": {
+      "type": "string"
+    },
+    "import_batch_id": {
       "type": "string"
     },
     "is_deleted": {

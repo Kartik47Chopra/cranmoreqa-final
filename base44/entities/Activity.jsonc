@@ -8,6 +8,9 @@
     "visi_id": {
       "type": "string"
     },
+    "inspection_code": {
+      "type": "string"
+    },
     "user": {
       "type": "string"
     },
@@ -30,6 +33,12 @@
       ]
     },
     "created_at": {
+      "type": "string"
+    },
+    "original_id": {
+      "type": "string"
+    },
+    "import_batch_id": {
       "type": "string"
     }
   },

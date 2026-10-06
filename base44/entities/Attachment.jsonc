@@ -11,6 +11,9 @@
     "step_id": {
       "type": "string"
     },
+    "step_label": {
+      "type": "string"
+    },
     "requirement_id": {
       "type": "string"
     },
@@ -54,6 +57,15 @@
       "type": "string"
     },
     "description": {
+      "type": "string"
+    },
+    "storage_path": {
+      "type": "string"
+    },
+    "original_id": {
+      "type": "string"
+    },
+    "import_batch_id": {
       "type": "string"
     },
     "is_deleted": {

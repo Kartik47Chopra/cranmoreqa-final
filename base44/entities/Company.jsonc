@@ -19,6 +19,12 @@
     "is_owner": {
       "type": "boolean",
       "default": false
+    },
+    "original_id": {
+      "type": "string"
+    },
+    "import_batch_id": {
+      "type": "string"
     }
   },
   "required": [

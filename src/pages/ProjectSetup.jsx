@@ -6,7 +6,8 @@ import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import RoleGate from "@/components/RoleGate";
 import { logActivity } from "@/lib/activityLog";
-import { Settings, Building2, FileText, Upload, Trash2, RotateCcw, Plus, Save, Loader2 } from "lucide-react";
+import { Settings, Building2, FileText, Upload, Trash2, RotateCcw, Plus, Save, Loader2, Eraser } from "lucide-react";
+import ImportTool from "@/components/ImportTool";
 
 const TABS = [
   { key: "details", label: "Details", icon: Settings, roles: ["admin", "pm"] },
@@ -35,7 +36,7 @@ export default function ProjectSetup() {
         {tab === "details" && <DetailsTab />}
         {tab === "locations" && <LocationsTab />}
         {tab === "templates" && <TemplatesTab />}
-        {tab === "import" && <ImportTab />}
+        {tab === "import" && <ImportTool />}
         {tab === "deleted" && <DeletedTab />}
       </PageShell>
     </RoleGate>
