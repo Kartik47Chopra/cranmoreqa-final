@@ -6,6 +6,8 @@ import { logActivity } from "@/lib/activityLog";
 import { CheckCircle2, Undo2 } from "lucide-react";
 
 const FORMATS = [
+  { key: "mongo", label: "★ MongoDB Export (JSON)", file: "mongo-export.json", entity: null },
+  { key: "files", label: "★ File Upload (Any Format)", file: "any format, up to 200MB", entity: "Document" },
   { key: "companies", label: "1. Companies", file: "cranmore-import-1-companies.csv", entity: "Company" },
   { key: "locations", label: "2. Locations", file: "cranmore-import-2-locations.csv", entity: "Location" },
   { key: "templates", label: "3. Templates", file: "cranmore-import-3-templates.csv", entity: "Template" },
@@ -14,6 +16,31 @@ const FORMATS = [
   { key: "drawings", label: "6. Drawings", file: "cranmore-import-6-drawings.csv", entity: "Document" },
   { key: "photos", label: "7. Photo Records", file: "cranmore-import-5-photo-records.csv", entity: "Attachment" },
 ];
+
+// Auto-detect MongoDB collection type from a record's fields
+function detectCollection(record) {
+  const keys = Object.keys(record);
+  const has = (k) => keys.includes(k);
+  if (has("drawing_no") || has("filename") || has("upload_filename")) return "drawings";
+  if (has("code") && (has("template_id") || has("template_name") || has("steps"))) return "visis";
+  if (has("steps") && has("trade") && !has("code")) return "templates";
+  if (has("text") && has("type") && (has("user") || has("inspection_code"))) return "activity";
+  if (has("name") && has("type") && (has("parent_id") || has("parent_original_id"))) return "locations";
+  if (has("name") && (has("color") || has("is_owner") || has("plan"))) return "companies";
+  if (has("storage_path") || has("file_uri")) return "photos";
+  return null;
+}
+
+// Cleanse a MongoDB record: strip Mongo internals, normalize fields
+function cleanseRecord(r) {
+  const cleaned = {};
+  for (const [k, v] of Object.entries(r)) {
+    if (k === "_id" || k === "__v") continue; // strip Mongo internals
+    if (k === "_cls") continue;
+    cleaned[k] = v;
+  }
+  return cleaned;
+}
 
 // Robust CSV parser handling quoted fields
 function parseCSV(text) {
@@ -76,17 +103,50 @@ export default function ImportTool() {
   React.useEffect(() => { if (project?.id) loadBatches(); }, [project?.id]);
 
   function handleFile(e) {
-    const f = e.target.files?.[0];
-    if (!f) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
     setPreview(null); setResult(null);
+
+    // File upload mode: binary files → storage
+    if (format === "files") {
+      setPreview({ total: files.length, sample: files.slice(0, 5).map((f) => ({ filename: f.name, size: f.size, type: f.type || "unknown" })), files, fileName: `${files.length} file(s)` });
+      return;
+    }
+
+    const f = files[0];
     const reader = new FileReader();
     reader.onload = () => {
       try {
         let rows = [];
-        if (f.name.endsWith(".json")) rows = parseJSON(reader.result);
-        else rows = parseCSV(reader.result);
+        if (f.name.endsWith(".json") || f.type === "application/json") {
+          const data = JSON.parse(reader.result);
+          // MongoDB export: object with collection keys, or array
+          if (format === "mongo") {
+            if (Array.isArray(data)) {
+              const coll = detectCollection(data[0] || {});
+              rows = data.map(cleanseRecord);
+              setPreview({ total: rows.length, sample: rows.slice(0, 5), rows, fileName: f.name, detectedCollection: coll });
+            } else if (typeof data === "object" && data !== null) {
+              // Multiple collections in one file
+              const collections = {};
+              Object.entries(data).forEach(([key, val]) => {
+                if (Array.isArray(val) && val.length > 0) {
+                  collections[key] = val.map(cleanseRecord);
+                }
+              });
+              const total = Object.values(collections).reduce((s, a) => s + a.length, 0);
+              const sample = Object.entries(collections).slice(0, 3).map(([k, v]) => ({ collection: k, count: v.length, fields: Object.keys(v[0] || {}).slice(0, 4).join(", ") }));
+              setPreview({ total, sample, collections, fileName: f.name, isMultiCollection: true });
+              return;
+            }
+          } else {
+            rows = Array.isArray(data) ? data : [data];
+          }
+        } else {
+          rows = parseCSV(reader.result);
+        }
         setPreview({ total: rows.length, sample: rows.slice(0, 5), rows, fileName: f.name });
-      } catch (e) { setPreview({ error: e.message }); }
+      } catch (err) { setPreview({ error: err.message }); }
     };
     reader.readAsText(f);
   }
@@ -219,11 +279,104 @@ export default function ImportTool() {
     };
   }
 
+  async function uploadFilesToStorage(files, batchId) {
+    let created = 0, errors = 0;
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      try {
+        setProgress(Math.round((i / files.length) * 100));
+        const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file: f });
+        await base44.entities.Document.create({
+          project_id: project.id,
+          title: f.name.replace(/\.[^.]+$/, ""),
+          filename: f.name,
+          upload_filename: f.name,
+          file_uri,
+          content_type: f.type || "application/octet-stream",
+          size: f.size,
+          uploaded_at: new Date().toISOString(),
+          import_batch_id: batchId,
+          is_deleted: false,
+        });
+        created++;
+      } catch (e) { errors++; console.error("upload failed", f.name, e); }
+    }
+    return { created, errors };
+  }
+
+  async function importMongoCollection(collectionName, rows, batchId, lookups) {
+    const collKey = collectionName.toLowerCase().includes("compan") ? "companies"
+      : collectionName.toLowerCase().includes("location") ? "locations"
+      : collectionName.toLowerCase().includes("template") ? "templates"
+      : collectionName.toLowerCase().includes("visi") || collectionName.toLowerCase().includes("inspection") ? "visis"
+      : collectionName.toLowerCase().includes("activ") ? "activity"
+      : collectionName.toLowerCase().includes("draw") || collectionName.toLowerCase().includes("document") ? "drawings"
+      : collectionName.toLowerCase().includes("photo") || collectionName.toLowerCase().includes("attach") ? "photos"
+      : detectCollection(rows[0] || {}) || "visis";
+    const entityName = FORMATS.find((f) => f.key === collKey)?.entity || "Visi";
+    let created = 0, skipped = 0;
+    for (let i = 0; i < rows.length; i += 200) {
+      const chunk = rows.slice(i, i + 200);
+      const records = chunk.map((r) => {
+        const origId = r.original_id || r._id || r.code;
+        return { ...r, project_id: r.project_id || project.id, original_id: origId, import_batch_id: batchId, is_deleted: false };
+      }).filter(Boolean);
+      try {
+        await base44.entities[entityName].bulkCreate(records);
+        created += records.length;
+      } catch (e) { console.error(`import ${collectionName} chunk failed`, e); }
+    }
+    return { created, skipped };
+  }
+
   async function confirmImport() {
-    if (!preview?.rows || !project?.id) return;
+    if (!project?.id) return;
     setImporting(true); setProgress(0);
     const batchId = `imp_${Date.now()}`;
     const lookups = buildLookups();
+
+    // File upload mode
+    if (format === "files" && preview?.files) {
+      const { created, errors } = await uploadFilesToStorage(preview.files, batchId);
+      setResult({ created, skipped: 0, errors, batchId });
+      logActivity({ project_id: project.id, user: user?.full_name || user?.email, text: `Uploaded ${created} files to storage (batch ${batchId})`, type: "bulk_create" });
+      setImporting(false); reload(); loadBatches();
+      return;
+    }
+
+    // MongoDB multi-collection mode
+    if (format === "mongo" && preview?.isMultiCollection) {
+      let totalCreated = 0, totalErrors = 0;
+      for (const [collName, rows] of Object.entries(preview.collections)) {
+        setProgress(0);
+        const { created, skipped } = await importMongoCollection(collName, rows, batchId, lookups);
+        totalCreated += created;
+      }
+      setResult({ created: totalCreated, skipped: 0, errors: totalErrors, batchId });
+      logActivity({ project_id: project.id, user: user?.full_name || user?.email, text: `Imported ${totalCreated} records from MongoDB export (batch ${batchId})`, type: "bulk_create" });
+      setImporting(false); reload(); loadBatches();
+      return;
+    }
+
+    // MongoDB single-collection auto-detect
+    if (format === "mongo" && preview?.detectedCollection) {
+      const collKey = preview.detectedCollection;
+      const entityName = FORMATS.find((f) => f.key === collKey)?.entity || "Visi";
+      const rows = preview.rows;
+      let created = 0;
+      for (let i = 0; i < rows.length; i += 200) {
+        const chunk = rows.slice(i, i + 200);
+        const records = chunk.map((r) => ({ ...r, project_id: r.project_id || project.id, original_id: r.original_id || r._id, import_batch_id: batchId, is_deleted: false }));
+        try { await base44.entities[entityName].bulkCreate(records); created += records.length; } catch (e) { console.error(e); }
+        setProgress(Math.round(((i + chunk.length) / rows.length) * 100));
+      }
+      setResult({ created, skipped: 0, errors: 0, batchId });
+      logActivity({ project_id: project.id, user: user?.full_name || user?.email, text: `Imported ${created} ${entityName} from MongoDB (batch ${batchId})`, type: "bulk_create" });
+      setImporting(false); reload(); loadBatches();
+      return;
+    }
+
+    if (!preview?.rows) { setImporting(false); return; }
     const rows = preview.rows;
     const errors = [];
     let created = 0, skipped = 0;
@@ -320,7 +473,7 @@ export default function ImportTool() {
       {/* Format selector */}
       <div className="rounded-lg border border-slate-200 bg-white p-4">
         <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-3">Import Data</h3>
-        <p className="text-sm text-slate-500 mb-3">Upload each CSV in order (1-7). Preview before saving. Duplicates (by original_id or code) are skipped, never overwritten. Each batch is tagged for undo.</p>
+        <p className="text-sm text-slate-500 mb-3">Upload MongoDB JSON exports or any file format (up to 200MB). JSON is auto-detected and cleansed; binary files (PDF, images, code) are uploaded to private storage. Each batch is tagged for undo.</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
           {FORMATS.map((f) => (
             <button key={f.key} onClick={() => { setFormat(f.key); setPreview(null); setResult(null); if (fileRef.current) fileRef.current.value = ""; }}
@@ -330,7 +483,7 @@ export default function ImportTool() {
           ))}
         </div>
         <div className="text-xs text-slate-400 mb-2">Expected file: <span className="font-mono">{fmt.file}</span></div>
-        <input ref={fileRef} type="file" accept=".csv,.json" onChange={handleFile} className="w-full text-sm" />
+        <input ref={fileRef} type="file" accept={format === "files" ? "*" : ".csv,.json"} multiple={format === "files"} onChange={handleFile} className="w-full text-sm" />
       </div>
 
       {/* Preview */}
@@ -338,9 +491,19 @@ export default function ImportTool() {
         <div className="rounded-lg border border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500">Preview</h3>
-            <span className="text-sm font-semibold text-slate-700">{preview.total} rows</span>
+            <span className="text-sm font-semibold text-slate-700">{preview.total} {preview.files ? "files" : "rows"}{preview.detectedCollection ? ` · ${preview.detectedCollection}` : ""}</span>
           </div>
-          {preview.sample?.length > 0 && (
+          {preview.isMultiCollection ? (
+            <div className="space-y-1 mb-3">
+              {preview.sample.map((s, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs rounded border border-slate-100 px-2 py-1.5">
+                  <span className="font-mono font-semibold text-emerald-700">{s.collection}</span>
+                  <span className="text-slate-500">{s.count} records</span>
+                  <span className="text-slate-400 truncate ml-auto">{s.fields}</span>
+                </div>
+              ))}
+            </div>
+          ) : preview.sample?.length > 0 && (
             <div className="overflow-x-auto rounded border border-slate-100 max-h-48">
               <table className="w-full text-xs">
                 <thead className="bg-slate-50 sticky top-0">
@@ -361,12 +524,12 @@ export default function ImportTool() {
               <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                 <div className="h-full bg-emerald-500 transition-all" style={{ width: `${progress}%` }} />
               </div>
-              <div className="mt-1 text-xs text-slate-500 text-center">{progress}% — importing...</div>
+              <div className="mt-1 text-xs text-slate-500 text-center">{progress}% — {format === "files" ? "uploading..." : "importing..."}</div>
             </div>
           ) : (
             <button onClick={confirmImport} disabled={preview.total === 0}
               className="mt-3 w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
-              Confirm Import ({preview.total} rows)
+              {format === "files" ? `Upload ${preview.total} Files to Storage` : `Confirm Import (${preview.total} ${preview.files ? "files" : "rows"})`}
             </button>
           )}
         </div>

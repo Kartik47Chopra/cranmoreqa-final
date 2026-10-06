@@ -6,9 +6,10 @@ import { useAuth } from "@/lib/AuthContext";
 import { statusBucket, checklistProgress, pct, statusBadge, OVERRIDE_META, daysOpen } from "@/lib/qaUtils";
 import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
+import BackButton from "@/components/BackButton";
 import { logActivity } from "@/lib/activityLog";
 import {
-  CheckCircle2, Circle, ArrowLeft, Camera, Trash2, ClipboardCheck,
+  CheckCircle2, Circle, Camera, Trash2, ClipboardCheck,
   AlertTriangle, History, X, Loader2, Send, FileText, ExternalLink,
   Ban, Zap, Upload, Milestone as MilestoneIcon,
 } from "lucide-react";
@@ -166,7 +167,7 @@ export default function InspectionDetail() {
   if (error) return (
     <div className="flex flex-col items-center justify-center gap-3 p-8">
       <p className="text-sm text-red-600">{error}</p>
-      <button onClick={() => navigate(-1)} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">Go back</button>
+      <BackButton fallback="/" label="Go back" className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white" />
     </div>
   );
   if (!visi) return <EmptyState title="Visi not found" />;
@@ -188,9 +189,7 @@ export default function InspectionDetail() {
       {/* Header */}
       <header className="shrink-0 border-b border-slate-200 bg-white px-4 md:px-6 py-3">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 shrink-0">
-            <ArrowLeft size={20} />
-          </button>
+          <BackButton fallback="/" />
           <StatusBadge visi={visi} size="md" />
           <div className="min-w-0 flex-1">
             <h1 className="text-lg font-bold text-slate-900 truncate">

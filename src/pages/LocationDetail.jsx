@@ -6,9 +6,10 @@ import { useAuth } from "@/lib/AuthContext";
 import { statusBucket, checklistProgress, locationPath } from "@/lib/qaUtils";
 import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
+import BackButton from "@/components/BackButton";
 import { logActivity } from "@/lib/activityLog";
 import {
-  ArrowLeft, ClipboardList, Camera, FileText, Milestone as MilestoneIcon, MapPin, ChevronRight, Plus,
+  ClipboardList, Camera, FileText, Milestone as MilestoneIcon, MapPin, ChevronRight, Plus,
   Loader2, MapPin as LocationIcon, Ban, QrCode, Pencil, BedDouble, Bath, Sofa, WashingMachine,
   DoorOpen, MessageSquare, Trash2, X,
 } from "lucide-react";
@@ -139,9 +140,7 @@ export default function LocationDetail() {
   if (!loc) return (
     <div className="flex h-full flex-col">
       <header className="px-4 md:px-6 py-4 border-b border-slate-200 bg-white shrink-0">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700">
-          <ArrowLeft size={16} /> Back
-        </button>
+        <BackButton fallback="/" label="Back" />
       </header>
       <EmptyState title="Location not found" />
     </div>
@@ -157,9 +156,7 @@ export default function LocationDetail() {
       {/* Header */}
       <header className="shrink-0 border-b border-slate-200 bg-white px-4 md:px-6 py-3 md:py-4">
         <div className="flex items-start gap-3">
-          <button onClick={() => navigate(-1)} className="mt-1 p-2 rounded-lg hover:bg-slate-100 text-slate-500 shrink-0">
-            <ArrowLeft size={20} />
-          </button>
+          <BackButton fallback="/" className="mt-1" />
           <div className="min-w-0 flex-1">
             {editingName ? (
               <div className="flex items-center gap-2">
