@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQaData } from "@/lib/QaDataContext";
@@ -8,9 +8,9 @@ import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import { logActivity } from "@/lib/activityLog";
 import {
-  CheckCircle2, Circle, ArrowLeft, Camera, Trash2, MapPin, Building2, ClipboardCheck,
-  AlertTriangle, History, Image as ImageIcon, X, Loader2, Send, FileText, ExternalLink,
-  Ban, Zap, Upload, MessageSquare, MoreVertical, Milestone as MilestoneIcon, Plus,
+  CheckCircle2, Circle, ArrowLeft, Camera, Trash2, ClipboardCheck,
+  AlertTriangle, History, X, Loader2, Send, FileText, ExternalLink,
+  Ban, Zap, Upload, Milestone as MilestoneIcon,
 } from "lucide-react";
 
 export default function InspectionDetail() {

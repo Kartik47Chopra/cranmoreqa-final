@@ -3,14 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQaData } from "@/lib/QaDataContext";
 import { useAuth } from "@/lib/AuthContext";
-import { statusBucket, checklistProgress, pct, locationPath, buildLocationTree } from "@/lib/qaUtils";
+import { statusBucket, checklistProgress, locationPath } from "@/lib/qaUtils";
 import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import { logActivity } from "@/lib/activityLog";
 import {
   ArrowLeft, ClipboardList, Camera, FileText, Milestone as MilestoneIcon, MapPin, ChevronRight, Plus,
-  Loader2, MapPin as LocationIcon, Ban, QrCode, Pencil, Home, BedDouble, Bath, Sofa, WashingMachine,
-  DoorOpen, MessageSquare, Trash2, Filter, ArrowUpDown, X,
+  Loader2, MapPin as LocationIcon, Ban, QrCode, Pencil, BedDouble, Bath, Sofa, WashingMachine,
+  DoorOpen, MessageSquare, Trash2, X,
 } from "lucide-react";
 
 const TABS = [

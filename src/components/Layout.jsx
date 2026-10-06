@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import AskAIPanel from "@/components/AskAIPanel";
 import { useAuth } from "@/lib/AuthContext";
 import { useQaData } from "@/lib/QaDataContext";
 import LocationTree from "@/components/LocationTree";
@@ -29,6 +30,7 @@ export default function Layout() {
   const { project, projects, companyMap, locations, loading, selectProject } = useQaData();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const [askAIOpen, setAskAIOpen] = useState(false);
   const navigate = useNavigate();
 
   const userRole = user?.role || "viewer";
@@ -176,13 +178,14 @@ export default function Layout() {
 
       {/* Ask AI floating button — disabled placeholder until Checkpoint 5 */}
       <button
-        disabled
+        onClick={() => setAskAIOpen(true)}
         title="Ask AI"
-        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-slate-300 text-slate-500 px-4 py-3 font-semibold text-sm cursor-not-allowed"
+        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-3 font-semibold text-sm shadow-lg hover:bg-emerald-700 transition-colors"
       >
         <Sparkles size={18} />
         <span className="hidden sm:inline">Ask AI</span>
       </button>
+      <AskAIPanel open={askAIOpen} onClose={() => setAskAIOpen(false)} />
     </div>
   );
 }

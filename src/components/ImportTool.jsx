@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQaData } from "@/lib/QaDataContext";
 import { useAuth } from "@/lib/AuthContext";
 import { logActivity } from "@/lib/activityLog";
-import { Loader2, Upload, CheckCircle2, AlertTriangle, FileUp, Undo2, X } from "lucide-react";
+import { CheckCircle2, Undo2 } from "lucide-react";
 
 const FORMATS = [
   { key: "companies", label: "1. Companies", file: "cranmore-import-1-companies.csv", entity: "Company" },

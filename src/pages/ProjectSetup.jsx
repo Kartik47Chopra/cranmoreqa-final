@@ -6,8 +6,9 @@ import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import RoleGate from "@/components/RoleGate";
 import { logActivity } from "@/lib/activityLog";
-import { Settings, Building2, FileText, Upload, Trash2, RotateCcw, Plus, Save, Loader2, Eraser } from "lucide-react";
+import { Settings, Building2, FileText, Upload, Trash2, RotateCcw, Plus, Save, Loader2, Eraser, Database } from "lucide-react";
 import ImportTool from "@/components/ImportTool";
+import DataTools from "@/components/DataTools";
 
 const TABS = [
   { key: "details", label: "Details", icon: Settings, roles: ["admin", "pm"] },
@@ -15,6 +16,7 @@ const TABS = [
   { key: "templates", label: "Templates", icon: FileText, roles: ["admin", "pm"] },
   { key: "import", label: "Import", icon: Upload, roles: ["admin"] },
   { key: "deleted", label: "Recently Deleted", icon: Trash2, roles: ["admin"] },
+  { key: "data", label: "Data Tools", icon: Database, roles: ["admin"] },
 ];
 
 export default function ProjectSetup() {
@@ -38,6 +40,7 @@ export default function ProjectSetup() {
         {tab === "templates" && <TemplatesTab />}
         {tab === "import" && <ImportTool />}
         {tab === "deleted" && <DeletedTab />}
+        {tab === "data" && <DataTools />}
       </PageShell>
     </RoleGate>
   );
