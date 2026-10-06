@@ -1,11 +1,13 @@
 // Shared QA status logic — single source of truth for completion + progress.
-// Mirrors backend/status_utils.py exactly so every page, graph, PDF and Excel
-// export uses identical completion logic.
 
 export const COMPLETE_STEP_STATUSES = new Set(["complete", "completed", "done", "passed", "signed_off", "approved"]);
 
 export function isStepComplete(step) {
   return COMPLETE_STEP_STATUSES.has((step?.status || "").toLowerCase());
+}
+
+export function stepLabel(step) {
+  return step?.label || step?.title || step?.name || "";
 }
 
 export function checklistProgress(v) {
@@ -14,13 +16,6 @@ export function checklistProgress(v) {
   return { done, total: steps.length };
 }
 
-// 3-bucket: 'completed' | 'in_progress' | 'open'
-// Rules (in order — matches status_utils.py):
-//   1. override_status na/closed → completed
-//   2. override_status cant_close/in_review/in_dispute → in_progress
-//   3. all steps complete → completed
-//   4. some (not all) steps complete → in_progress
-//   5. no steps complete → open
 export function statusBucket(v) {
   const ov = v?.override_status;
   if (ov === "na" || ov === "closed") return "completed";
@@ -31,18 +26,10 @@ export function statusBucket(v) {
   return "completed";
 }
 
-export function isVisiComplete(v) {
-  return statusBucket(v) === "completed";
-}
+export function isVisiComplete(v) { return statusBucket(v) === "completed"; }
+export function hasProgress(v) { return statusBucket(v) !== "open"; }
 
-export function hasProgress(v) {
-  return statusBucket(v) !== "open";
-}
-
-// Best-effort date for filtering — closed_at → last_updated → created_at
-export function activityDate(v) {
-  return v?.closed_at || v?.last_updated || v?.created_at;
-}
+export function activityDate(v) { return v?.closed_at || v?.last_updated || v?.created_at; }
 
 export function daysOpen(v) {
   try {
@@ -50,12 +37,9 @@ export function daysOpen(v) {
     if (!created) return 0;
     const end = v?.closed_at ? new Date(v.closed_at) : new Date();
     return Math.max(0, Math.round((end - created) / 86400000));
-  } catch {
-    return 0;
-  }
+  } catch { return 0; }
 }
 
-// Display status — override if set, otherwise computed from steps
 export function computeStatus(v) {
   const ov = v?.override_status;
   if (ov && ov !== "none") return ov;
@@ -85,44 +69,71 @@ export function statusBadge(v) {
   return STATUS_META[statusBucket(v)];
 }
 
-export function pct(done, total) {
-  if (!total) return 0;
-  return Math.round((done / total) * 100);
-}
+export function pct(done, total) { if (!total) return 0; return Math.round((done / total) * 100); }
 
-// Build a nested location tree from flat list, sorted by `order` field.
+// Build a nested location tree from flat list using parent_original_id.
+// Roots = locations with empty/null parent_original_id.
+// Orphans (parent_original_id set but not found) are EXCLUDED from the tree.
 export function buildLocationTree(locations) {
-  const byParent = {};
-  locations.forEach((l) => {
-    const p = l.parent_id || "root";
-    (byParent[p] = byParent[p] || []).push(l);
+  const active = locations.filter((l) => !l.is_deleted);
+  const byOrig = {};
+  active.forEach((l) => { if (l.original_id) byOrig[l.original_id] = l; });
+  const byParentOrig = {};
+  active.forEach((l) => {
+    const pOrig = l.parent_original_id;
+    if (!pOrig) { (byParentOrig["root"] = byParentOrig["root"] || []).push(l); return; }
+    if (!byOrig[pOrig]) return; // orphan — parent not found, skip (error, shown on Verify)
+    (byParentOrig[pOrig] = byParentOrig[pOrig] || []).push(l);
   });
-  Object.values(byParent).forEach((arr) => arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
-  return byParent;
+  Object.values(byParentOrig).forEach((arr) => arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+  return byParentOrig;
 }
 
-// Build a full path string for a location (e.g. "RACF · Aged Care Facility / Ground Floor / R.G43 Main Kitchen")
+// Full path using parent_original_id chain.
 export function locationPath(locations, id) {
   const byId = Object.fromEntries(locations.map((l) => [l.id, l]));
+  const byOrig = {};
+  locations.forEach((l) => { if (l.original_id) byOrig[l.original_id] = l; });
   const path = [];
   let cur = byId[id];
   let seen = 0;
   while (cur && seen < 30) {
     path.unshift(cur.name);
-    cur = byId[cur.parent_id];
+    cur = cur.parent_original_id ? byOrig[cur.parent_original_id] : null;
     seen++;
   }
   return path.join(" / ");
 }
 
-// Find the top-level (Building) ancestor of a location
+// Collect all descendant original_ids of a location (including itself).
+export function subtreeOriginalIds(locations, rootId) {
+  const byId = Object.fromEntries(locations.map((l) => [l.id, l]));
+  const byParentOrig = {};
+  locations.forEach((l) => {
+    if (l.parent_original_id) (byParentOrig[l.parent_original_id] = byParentOrig[l.parent_original_id] || []).push(l);
+  });
+  const ids = new Set();
+  const root = byId[rootId];
+  if (!root) return ids;
+  function walk(loc) {
+    if (!loc || loc.is_deleted) return;
+    if (loc.original_id) ids.add(loc.original_id);
+    const children = byParentOrig[loc.original_id] || [];
+    children.forEach(walk);
+  }
+  walk(root);
+  return ids;
+}
+
 export function topLocation(locations, id) {
   const byId = Object.fromEntries(locations.map((l) => [l.id, l]));
+  const byOrig = {};
+  locations.forEach((l) => { if (l.original_id) byOrig[l.original_id] = l; });
   let cur = byId[id];
   let seen = 0;
-  while (cur && cur.parent_id && seen < 20) {
-    const parent = byId[cur.parent_id];
-    if (!parent || !parent.parent_id) return parent || cur;
+  while (cur && cur.parent_original_id && seen < 20) {
+    const parent = byOrig[cur.parent_original_id];
+    if (!parent || !parent.parent_original_id) return parent || cur;
     cur = parent;
     seen++;
   }

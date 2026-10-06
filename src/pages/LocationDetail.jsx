@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQaData } from "@/lib/QaDataContext";
 import { useAuth } from "@/lib/AuthContext";
-import { statusBucket, checklistProgress, locationPath } from "@/lib/qaUtils";
+import { statusBucket, checklistProgress, locationPath, subtreeOriginalIds } from "@/lib/qaUtils";
+import { readAll } from "@/components/qa/paging";
 import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import BackButton from "@/components/BackButton";
@@ -50,7 +51,7 @@ function roomIcon(name) {
 export default function LocationDetail() {
   const { locationId } = useParams();
   const navigate = useNavigate();
-  const { locationMap, locations, templateMap, companyMap, project } = useQaData();
+  const { locationMap, locations, templateMap, companyMap, project, reload } = useQaData();
   const { user } = useAuth();
   const [tab, setTab] = useState("overview");
   const [visis, setVisis] = useState([]);
@@ -68,39 +69,50 @@ export default function LocationDetail() {
   useEffect(() => {
     if (!locationId) return;
     setLoading(true);
+    // Collect subtree original_ids for this location (includes itself)
+    const subtreeIds = subtreeOriginalIds(locations, locationId);
+    const subtreeArr = [...subtreeIds];
     Promise.all([
-      base44.entities.Visi.filter({ location_id: locationId }),
-      base44.entities.Attachment.filter({ location_id: locationId }),
-      base44.entities.Document.filter({ location_id: locationId }),
-      base44.entities.Milestone.filter({ location_id: locationId }),
+      // Visis for this location AND all descendants (query in chunks by location_original_id)
+      (async () => {
+        const all = await readAll("Visi", { project_id: project?.id });
+        return all.filter((v) => !v.is_deleted && subtreeArr.includes(v.location_original_id));
+      })(),
+      base44.entities.Attachment.filter({ location_id: locationId }).then((a) => (Array.isArray(a) ? a : []).filter((x) => !x.is_deleted)),
+      base44.entities.Document.filter({ location_id: locationId }).then((d) => (Array.isArray(d) ? d : []).filter((x) => !x.is_deleted)),
+      base44.entities.Milestone.filter({ location_id: locationId }).then((m) => (Array.isArray(m) ? m : [])),
     ]).then(([v, a, d, m]) => {
-      setVisis((Array.isArray(v) ? v : []).filter((x) => !x.is_deleted));
-      setAttachments(Array.isArray(a) ? a : []).filter((x) => !x.is_deleted);
-      setDocuments(Array.isArray(d) ? d : []).filter((x) => !x.is_deleted);
-      setMilestones(Array.isArray(m) ? m : []);
+      setVisis(v);
+      setAttachments(a);
+      setDocuments(d);
+      setMilestones(m);
     }).catch(console.error).finally(() => setLoading(false));
-  }, [locationId]);
+  }, [locationId, locations, project?.id]);
 
   const loc = locationMap[locationId];
+  // Children by parent_original_id
   const childLocations = useMemo(
-    () => locations.filter((l) => l.parent_id === locationId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-    [locations, locationId]
+    () => locations.filter((l) => l.parent_original_id === loc?.original_id).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [locations, loc?.original_id]
   );
 
-  // Count Visis per child location (for room cards)
+  // Count Visis per child location (for room cards) — direct visis only
   useEffect(() => {
     if (childLocations.length === 0) return;
     let active = true;
-    Promise.all(
-      childLocations.map((c) => base44.entities.Visi.filter({ location_id: c.id }).then((v) => [c.id, (Array.isArray(v) ? v : []).filter((x) => !x.is_deleted)]))
-    ).then((results) => {
-      if (!active) return;
-      const map = {};
-      results.forEach(([id, v]) => { map[id] = v; });
-      setChildVisis(map);
-    }).catch(console.error);
+    (async () => {
+      try {
+        const allVisis = await readAll("Visi", { project_id: project?.id });
+        if (!active) return;
+        const map = {};
+        childLocations.forEach((c) => {
+          map[c.id] = allVisis.filter((v) => !v.is_deleted && v.location_original_id === c.original_id);
+        });
+        setChildVisis(map);
+      } catch (e) { console.error(e); }
+    })();
     return () => { active = false; };
-  }, [locationId, childLocations.length]);
+  }, [childLocations, project?.id]);
 
   async function toggleNA() {
     if (!loc) return;
@@ -109,7 +121,7 @@ export default function LocationDetail() {
       await base44.entities.Location.update(loc.id, { status: newStatus });
       logActivity({ project_id: loc.project_id, user: user?.full_name || user?.email, text: `Location "${loc.name}" marked ${newStatus === "na" ? "N/A" : "active"}`, type: "status" });
       setShowNAConfirm(false);
-      window.location.reload();
+      reload();
     } catch (e) { console.error(e); }
   }
 
@@ -118,16 +130,17 @@ export default function LocationDetail() {
     try {
       await base44.entities.Location.update(loc.id, { name: nameValue.trim() });
       setEditingName(false);
-      window.location.reload();
+      reload();
     } catch (e) { console.error(e); }
   }
 
   async function addApartment(name) {
     if (!name?.trim() || !project?.id) return;
     try {
-      const apt = await base44.entities.Location.create({ project_id: project.id, parent_id: locationId, name: name.trim(), type: "Unit", order: childLocations.length });
+      const aptOrig = crypto.randomUUID();
+      const apt = await base44.entities.Location.create({ project_id: project.id, parent_original_id: loc?.original_id, name: name.trim(), type: "Unit", order: childLocations.length, original_id: aptOrig });
       const standardRooms = ["Bedroom 1", "Bedroom 2", "Bedroom 3", "Ensuite", "Bathroom", "Living / Kitchen / Dining", "Laundry", "Powder Room"];
-      await base44.entities.Location.bulkCreate(standardRooms.map((r, i) => ({ project_id: project.id, parent_id: apt.id, name: r, type: "Room", order: i })));
+      await base44.entities.Location.bulkCreate(standardRooms.map((r, i) => ({ project_id: project.id, parent_original_id: aptOrig, name: r, type: "Room", order: i, original_id: crypto.randomUUID() })));
       logActivity({ project_id: project.id, user: user?.full_name || user?.email, text: `Added apartment: ${name.trim()}`, type: "bulk_create" });
       setShowAddApt(false);
       navigate(`/location/${apt.id}`);

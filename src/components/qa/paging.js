@@ -13,7 +13,6 @@ export async function readAll(name, query = {}) {
 export const activeRecords = rows => rows.filter(r => !r.is_deleted);
 export async function openStoredFile(file_uri) {
   if (!file_uri || file_uri.startsWith('pending:')) return;
-  const tab = window.open('', '_blank');
   const url = /^https?:/.test(file_uri) ? file_uri : (await base44.integrations.Core.CreateFileSignedUrl({ file_uri })).signed_url;
-  if (tab) tab.location.href = url;
+  window.open(url, '_blank');
 }

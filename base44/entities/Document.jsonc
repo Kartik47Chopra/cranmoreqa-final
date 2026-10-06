@@ -8,6 +8,9 @@
     "location_id": {
       "type": "string"
     },
+    "location_original_id": {
+      "type": "string"
+    },
     "discipline": {
       "type": "string"
     },

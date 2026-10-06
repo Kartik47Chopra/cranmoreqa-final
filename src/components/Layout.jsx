@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import AskAIPanel from "@/components/AskAIPanel";
 import { useAuth } from "@/lib/AuthContext";
 import { useQaData } from "@/lib/QaDataContext";
@@ -32,6 +32,8 @@ export default function Layout() {
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [askAIOpen, setAskAIOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const selectedLocId = location.pathname.startsWith("/location/") ? location.pathname.split("/")[2] : null;
 
   const userRole = user?.role || "viewer";
   const userCompany = user?.company_id ? companyMap[user.company_id] : null;
@@ -143,7 +145,7 @@ export default function Layout() {
             ) : locations.length === 0 ? (
               <div className="px-3 py-2 text-xs text-slate-500">No locations yet. Import data or add them in Project Setup.</div>
             ) : (
-              <LocationTree locations={locations} onSelect={(l) => { navigate(`/location/${l.id}`); setDrawerOpen(false); }} />
+              <LocationTree locations={locations} selectedId={selectedLocId} onSelect={(l) => { navigate(`/location/${l.id}`); setDrawerOpen(false); }} />
             )}
           </div>
         </div>

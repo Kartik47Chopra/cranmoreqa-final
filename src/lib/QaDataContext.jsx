@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
+import { readAll } from "@/components/qa/paging";
 
 const QaDataContext = createContext(null);
 
@@ -24,12 +25,12 @@ export function QaDataProvider({ children }) {
     try {
       const [projs, comps, tpls] = await Promise.all([
         base44.entities.Project.list(),
-        base44.entities.Company.list(),
-        base44.entities.Template.list(),
+        readAll("Company"),
+        readAll("Template"),
       ]);
       setProjects(projs);
-      setCompanies(comps);
-      setTemplates(tpls);
+      setCompanies(comps.filter((c) => !c.is_deleted));
+      setTemplates(tpls.filter((t) => !t.is_deleted));
       let pid = projectId;
       if (!pid && projs.length > 0) {
         pid = projs[0].id;
@@ -37,8 +38,8 @@ export function QaDataProvider({ children }) {
         setProjectId(pid);
       }
       if (pid) {
-        const locs = await base44.entities.Location.filter({ project_id: pid });
-        setLocations(locs);
+        const locs = await readAll("Location", { project_id: pid });
+        setLocations(locs.filter((l) => !l.is_deleted));
       } else {
         setLocations([]);
       }

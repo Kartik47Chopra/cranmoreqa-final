@@ -27,6 +27,9 @@
     "location_id": {
       "type": "string"
     },
+    "location_original_id": {
+      "type": "string"
+    },
     "project_id": {
       "type": "string"
     },
@@ -128,16 +131,16 @@
       "type": "string",
       "format": "date"
     },
-    "door_id": {
-      "type": "string"
-    },
-    "skirting_type": {
-      "type": "string"
-    },
     "fixture_label": {
       "type": "string"
     },
     "document_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "document_original_ids": {
       "type": "array",
       "items": {
         "type": "string"

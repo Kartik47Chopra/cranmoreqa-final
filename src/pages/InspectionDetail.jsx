@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQaData } from "@/lib/QaDataContext";
 import { useAuth } from "@/lib/AuthContext";
-import { statusBucket, checklistProgress, pct, statusBadge, OVERRIDE_META, daysOpen } from "@/lib/qaUtils";
+import { statusBucket, checklistProgress, pct, statusBadge, OVERRIDE_META, daysOpen, stepLabel } from "@/lib/qaUtils";
+import { readAll, openStoredFile } from "@/components/qa/paging";
 import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import BackButton from "@/components/BackButton";
@@ -17,7 +18,7 @@ import {
 export default function InspectionDetail() {
   const { visiId } = useParams();
   const navigate = useNavigate();
-  const { locationMap, templateMap, companyMap, locations, project } = useQaData();
+  const { locationMap, templateMap, companyMap, locations, project, reload } = useQaData();
   const { user } = useAuth();
   const [visi, setVisi] = useState(null);
   const [attachments, setAttachments] = useState([]);
@@ -45,11 +46,13 @@ export default function InspectionDetail() {
       setVisi(v);
       setAttachments(Array.isArray(atts) ? atts.filter((a) => !a.is_deleted) : []);
       setActivities(Array.isArray(acts) ? acts.sort((a, b) => new Date(b.created_at || b.created_date) - new Date(a.created_at || a.created_date)) : []);
-      // Load linked documents
-      if (v.document_ids?.length > 0) {
+      // Load linked documents via document_original_ids (or document_ids fallback)
+      const docOrigIds = v.document_original_ids || [];
+      const docIds = v.document_ids || [];
+      if (docOrigIds.length > 0 || docIds.length > 0) {
         try {
-          const docs = await base44.entities.Document.filter({ project_id: v.project_id });
-          setDocuments((Array.isArray(docs) ? docs : []).filter((d) => (v.document_ids.includes(d.original_id) || v.document_ids.includes(d.id)) && !d.is_deleted));
+          const docs = await readAll("Document", { project_id: v.project_id });
+          setDocuments(docs.filter((d) => !d.is_deleted && (docOrigIds.includes(d.original_id) || docIds.includes(d.id))));
         } catch { setDocuments([]); }
       }
     }).catch((e) => setError(e.message || "Failed to load Visi"))
@@ -70,7 +73,7 @@ export default function InspectionDetail() {
       const fresh = await base44.entities.Visi.update(visi.id, updated);
       setVisi(fresh);
       const step = visi.steps[idx];
-      logActivity({ project_id: visi.project_id, visi_id: visi.id, user: user?.full_name || user?.email, text: `Step "${step.label}" marked ${steps[idx].status === "complete" ? "complete" : "pending"}`, type: "step" });
+      logActivity({ project_id: visi.project_id, visi_id: visi.id, user: user?.full_name || user?.email, text: `Step "${stepLabel(step)}" marked ${steps[idx].status === "complete" ? "complete" : "pending"}`, type: "step" });
       refreshActivity();
     } catch (e) { console.error(e); }
     setSaving(false);
@@ -83,7 +86,7 @@ export default function InspectionDetail() {
     try {
       const fresh = await base44.entities.Visi.update(visi.id, { steps, last_updated: new Date().toISOString() });
       setVisi(fresh);
-      logActivity({ project_id: visi.project_id, visi_id: visi.id, user: user?.full_name || user?.email, text: `Force completed step "${visi.steps[idx].label}"`, type: "step" });
+      logActivity({ project_id: visi.project_id, visi_id: visi.id, user: user?.full_name || user?.email, text: `Force completed step "${stepLabel(visi.steps[idx])}"`, type: "step" });
       refreshActivity();
     } catch (e) { console.error(e); }
     setSaving(false);
@@ -219,7 +222,7 @@ export default function InspectionDetail() {
                     <button key={i} onClick={() => setActiveStep(i)}
                       className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors ${activeStep === i ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-50"}`}>
                       <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${complete ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-500"}`}>{i + 1}</span>
-                      <span className="truncate">{s.label}</span>
+                      <span className="truncate">{stepLabel(s)}</span>
                     </button>
                   );
                 })}
@@ -285,7 +288,7 @@ export default function InspectionDetail() {
                           {complete ? <CheckCircle2 size={22} className="text-emerald-600" /> : <Circle size={22} className="text-slate-300" />}
                         </button>
                         <div className="min-w-0 flex-1">
-                          <div className={`text-sm font-medium ${complete ? "text-emerald-800" : "text-slate-700"}`}>{s.label}</div>
+                          <div className={`text-sm font-medium ${complete ? "text-emerald-800" : "text-slate-700"}`}>{stepLabel(s)}</div>
                         </div>
                         {isTask && <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-700">Task</span>}
                         <label className="cursor-pointer p-1.5 rounded text-slate-400 hover:bg-slate-100">
@@ -331,9 +334,9 @@ export default function InspectionDetail() {
                       </div>
                       {d.revision && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">Rev {d.revision}</span>}
                       {d.file_uri && !d.file_uri.startsWith("pending") ? (
-                        <a href={d.file_uri} target="_blank" rel="noreferrer" className="flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                        <button onClick={() => openStoredFile(d.file_uri)} className="flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
                           View <ExternalLink size={12} />
-                        </a>
+                        </button>
                       ) : (
                         <span className="text-xs text-slate-400">File not added yet</span>
                       )}

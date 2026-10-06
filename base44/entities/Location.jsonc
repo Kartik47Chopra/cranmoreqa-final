@@ -8,6 +8,9 @@
     "parent_id": {
       "type": "string"
     },
+    "parent_original_id": {
+      "type": "string"
+    },
     "name": {
       "type": "string"
     },
@@ -50,6 +53,12 @@
     },
     "mirrored": {
       "type": "boolean"
+    },
+    "full_path": {
+      "type": "string"
+    },
+    "depth": {
+      "type": "number"
     },
     "original_id": {
       "type": "string"
