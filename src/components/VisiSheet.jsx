@@ -53,7 +53,9 @@ export default function VisiSheet({ visi, open, onOpenChange, onUpdated }) {
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto bg-white p-0">
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-slate-200">
           <div className="flex items-center justify-between gap-3">
-            <SheetTitle className="font-mono text-lg font-bold tracking-tight text-slate-900">{visi.visi_code}</SheetTitle>
+            <SheetTitle className="text-lg font-bold tracking-tight text-slate-900">
+              <span className="font-mono">{visi.code || "—"}</span> <span className="text-slate-700">{visi.trade || tpl?.name || visi.template_name}</span>
+            </SheetTitle>
             <StatusBadge visi={visi} />
           </div>
           <SheetDescription className="space-y-1 text-left">
@@ -102,8 +104,7 @@ export default function VisiSheet({ visi, open, onOpenChange, onUpdated }) {
                     <Circle size={18} className="shrink-0 text-slate-300" />
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className={`text-sm font-medium ${complete ? "text-emerald-800" : "text-slate-700"}`}>{s.title}</div>
-                    <div className="text-[11px] uppercase tracking-wide text-slate-400">{s.type}</div>
+                    <div className={`text-sm font-medium ${complete ? "text-emerald-800" : "text-slate-700"}`}>{s.label}</div>
                   </div>
                 </button>
               );

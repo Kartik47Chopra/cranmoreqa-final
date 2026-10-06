@@ -48,7 +48,7 @@ export default function InspectionDetail() {
       if (v.document_ids?.length > 0) {
         try {
           const docs = await base44.entities.Document.filter({ project_id: v.project_id });
-          setDocuments((Array.isArray(docs) ? docs : []).filter((d) => v.document_ids.includes(d.original_id) && !d.is_deleted));
+          setDocuments((Array.isArray(docs) ? docs : []).filter((d) => (v.document_ids.includes(d.original_id) || v.document_ids.includes(d.id)) && !d.is_deleted));
         } catch { setDocuments([]); }
       }
     }).catch((e) => setError(e.message || "Failed to load Visi"))
@@ -193,8 +193,10 @@ export default function InspectionDetail() {
           </button>
           <StatusBadge visi={visi} size="md" />
           <div className="min-w-0 flex-1">
-            <h1 className="font-mono text-lg font-bold text-slate-900 truncate">{visi.code || "—"}</h1>
-            <div className="text-sm text-slate-500 truncate">{tradeName} · Inspection</div>
+            <h1 className="text-lg font-bold text-slate-900 truncate">
+              <span className="font-mono">{visi.code || "—"}</span> <span className="text-slate-700">{tradeName}</span>
+            </h1>
+            <div className="text-sm text-slate-500 truncate">{visi.visi_type || "Inspection"}</div>
           </div>
           {canManage && (
             <button onClick={() => setShowNotOnSite(true)} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
@@ -285,9 +287,8 @@ export default function InspectionDetail() {
                         </button>
                         <div className="min-w-0 flex-1">
                           <div className={`text-sm font-medium ${complete ? "text-emerald-800" : "text-slate-700"}`}>{s.label}</div>
-                          <div className="text-[11px] uppercase tracking-wide text-slate-400">{s.type}</div>
                         </div>
-                        {isTask && <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-700">Task</span>}
+                        {isTask && <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-700">Task</span>}
                         <label className="cursor-pointer p-1.5 rounded text-slate-400 hover:bg-slate-100">
                           <Camera size={16} />
                           <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={saving} />
@@ -386,7 +387,7 @@ export default function InspectionDetail() {
               <MetaRow label="Assignee" value={assignee?.name} color={assignee?.color} />
               <MetaRow label="Reviewer" value={reviewer?.name} color={reviewer?.color} />
               <MetaRow label="Visible To" value={visibleCompanies.map((c) => c.name).join(", ") || "—"} />
-              <MetaRow label="Created" value={visi.created_at ? `${fmtDate(visi.created_at)}` : "—"} />
+              <MetaRow label="Created" value={visi.created_at ? `${fmtDate(visi.created_at)}${visi.created_by ? ` · ${visi.created_by}` : ""}` : "—"} />
               <MetaRow label="System" value={visi.system} />
               <MetaRow label="Stage" value={visi.stage || tpl?.stage} />
               <MetaRow label="Discipline" value={visi.discipline || tpl?.discipline} />
@@ -484,5 +485,5 @@ function MetaRow({ label, value, color }) {
 }
 
 function fmtDate(date) {
-  return new Date(date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(date).toLocaleDateString("en-AU", { day: "numeric", month: "numeric", year: "numeric" });
 }

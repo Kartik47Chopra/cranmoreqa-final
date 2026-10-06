@@ -16,7 +16,7 @@ const ALL_NAV = [
   { to: "/my-tasks", label: "My Tasks", icon: ListTodo, roles: ["admin", "pm", "trade", "viewer"] },
   { to: "/assign-tasks", label: "Assign Tasks", icon: ClipboardList, roles: ["admin", "pm"] },
   { to: "/your-list", label: "Your List", icon: ListChecks, roles: ["admin", "pm", "trade"] },
-  { to: "/tracker", label: "Visis", icon: Grid3x3, roles: ["admin", "pm", "trade", "viewer"] },
+  { to: "/tracker", label: "Multi-Template Tracker", icon: Grid3x3, roles: ["admin", "pm", "trade", "viewer"] },
   { to: "/documents", label: "Documents", icon: FileText, roles: ["admin", "pm", "trade", "viewer"] },
   { to: "/milestones", label: "Milestone Tracker", icon: MilestoneIcon, roles: ["admin", "pm", "trade", "viewer"] },
   { to: "/activity", label: "Activity", icon: ActivityIcon, roles: ["admin", "pm", "trade", "viewer"] },
