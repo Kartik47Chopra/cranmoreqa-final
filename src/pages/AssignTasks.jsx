@@ -10,6 +10,7 @@ import StatusBadge from "@/components/StatusBadge";
 import { logActivity } from "@/lib/activityLog";
 import { ClipboardList, ChevronRight, Loader2, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { readAll } from "@/components/qa/paging";
 
 export default function AssignTasks() {
   const { project, locations, locationMap, companies, companyMap } = useQaData();
@@ -27,12 +28,12 @@ export default function AssignTasks() {
   useEffect(() => {
     if (!project?.id) return;
     setLoading(true);
-    base44.entities.Visi.filter({ project_id: project.id }).then((all) => {
-      setVisis((Array.isArray(all) ? all : []).filter((v) => !v.is_deleted));
+    readAll("Visi", { project_id: project.id }).then((all) => {
+      setVisis(all.filter((v) => !v.is_deleted));
     }).catch(console.error).finally(() => setLoading(false));
   }, [project?.id]);
 
-  const buildings = useMemo(() => locations.filter((l) => !l.parent_id), [locations]);
+  const buildings = useMemo(() => locations.filter((l) => !l.parent_original_id), [locations]);
 
   const filtered = useMemo(() => {
     return visis.filter((v) => {

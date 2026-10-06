@@ -7,6 +7,7 @@ import EmptyState from "@/components/EmptyState";
 import RoleGate from "@/components/RoleGate";
 import { statusBucket, checklistProgress, pct } from "@/lib/qaUtils";
 import { Milestone as MilestoneIcon, Plus, Loader2, X, Calendar } from "lucide-react";
+import { readAll } from "@/components/qa/paging";
 
 export default function Milestones() {
   const { project, locations, locationMap } = useQaData();
@@ -23,10 +24,10 @@ export default function Milestones() {
     setLoading(true);
     Promise.all([
       base44.entities.Milestone.filter({ project_id: project.id }),
-      base44.entities.Visi.filter({ project_id: project.id }),
+      readAll("Visi", { project_id: project.id }),
     ]).then(([m, v]) => {
       setMilestones(Array.isArray(m) ? m : []);
-      setVisis((Array.isArray(v) ? v : []).filter((x) => !x.is_deleted));
+      setVisis(v.filter((x) => !x.is_deleted));
     }).catch(console.error).finally(() => setLoading(false));
   }, [project?.id]);
 

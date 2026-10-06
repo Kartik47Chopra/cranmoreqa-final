@@ -6,6 +6,7 @@ import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import { logActivity } from "@/lib/activityLog";
 import { FileText, Upload, Search, Download, Trash2, Loader2 } from "lucide-react";
+import { readAll } from "@/components/qa/paging";
 
 export default function Documents() {
   const { project } = useQaData();
@@ -20,8 +21,8 @@ export default function Documents() {
   useEffect(() => {
     if (!project?.id) return;
     setLoading(true);
-    base44.entities.Document.filter({ project_id: project.id }).then((all) => {
-      setDocs((Array.isArray(all) ? all : []).filter((d) => !d.is_deleted));
+    readAll("Document", { project_id: project.id }).then((all) => {
+      setDocs(all.filter((d) => !d.is_deleted));
     }).catch(console.error).finally(() => setLoading(false));
   }, [project?.id]);
 

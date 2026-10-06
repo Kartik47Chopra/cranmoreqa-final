@@ -6,7 +6,8 @@ import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import DrillDownPanel from "@/components/DrillDownPanel";
 import { statusBucket, checklistProgress, pct, STATUS_META } from "@/lib/qaUtils";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { readAll } from "@/components/qa/paging";
 import { Building2, Wrench, Calendar, ChevronDown, ChevronUp, Activity as ActivityIcon, Inbox } from "lucide-react";
 
 const BUCKET_COLORS = { completed: "#10b981", in_progress: "#f59e0b", open: "#94a3b8" };
@@ -27,13 +28,13 @@ export default function Dashboard() {
 
   const buildings = useMemo(() => {
     const byParent = {};
-    locations.forEach((l) => { if (!l.parent_id) byParent[l.id] = l; });
+    locations.forEach((l) => { if (!l.parent_original_id) byParent[l.id] = l; });
     return Object.values(byParent);
   }, [locations]);
 
   const trades = useMemo(() => {
-    if (!agg?.byTrade) return [];
-    return Object.keys(agg.byTrade);
+    if (!agg?.tradeNames) return [];
+    return agg.tradeNames;
   }, [agg]);
 
   useEffect(() => {
@@ -54,8 +55,8 @@ export default function Dashboard() {
     const days = parseInt(range);
     const since = new Date();
     since.setDate(since.getDate() - days);
-    base44.entities.Activity.filter({ project_id: project.id }).then((all) => {
-      const filtered = (Array.isArray(all) ? all : []).filter((a) => {
+    readAll("Activity", { project_id: project.id }).then((all) => {
+      const filtered = all.filter((a) => {
         const d = a.created_at || a.created_date;
         return d && new Date(d) >= since;
       }).sort((a, b) => new Date(b.created_at || b.created_date) - new Date(a.created_at || a.created_date));
@@ -90,8 +91,8 @@ export default function Dashboard() {
   );
 
   const o = agg.overall;
-  const buildingData = Object.entries(agg.byBuilding).map(([name, c]) => ({ name, ...c }));
-  const tradeData = Object.entries(agg.byTrade).map(([name, c]) => ({ name, ...c }));
+  const buildingData = Object.entries(agg.byBuilding).map(([name, c]) => ({ name, ...c })).sort((a, b) => b.total - a.total);
+  const tradeData = Object.entries(agg.byTrade).map(([name, c]) => ({ name, ...c })).sort((a, b) => b.total - a.total);
   const statusData = [
     { name: "Closed", value: o.completed, color: BUCKET_COLORS.completed },
     { name: "In Progress", value: o.in_progress, color: BUCKET_COLORS.in_progress },
@@ -101,28 +102,28 @@ export default function Dashboard() {
   return (
     <PageShell
       title="Dashboard"
-      subtitle={project.name}
+      subtitle={`${project.name}${project.address ? " · " + project.address : ""}${project.drawing_set ? " · Drawing set " + project.drawing_set : ""}`}
       actions={
         <div className="flex gap-2">
-          <Select value={buildingFilter} onChange={setBuildingFilter} options={[{ value: "", label: "All buildings" }, ...buildings.map((b) => ({ value: b.id, label: b.name }))]} />
+          <Select value={buildingFilter} onChange={setBuildingFilter} options={[{ value: "", label: "All buildings" }, ...buildings.map((b) => ({ value: b.name, label: b.name }))]} />
           <Select value={tradeFilter} onChange={setTradeFilter} options={[{ value: "", label: "All trades" }, ...trades.map((t) => ({ value: t, label: t }))]} />
         </div>
       }
     >
       {/* Counters */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <Counter label="Total" value={o.total} color="bg-slate-100 text-slate-800 border-slate-200" onClick={() => openDrill(agg.items, "All inspections")} />
-        <Counter label="Closed" value={o.completed} color="bg-emerald-50 text-emerald-700 border-emerald-200" onClick={() => openDrill(agg.items.filter((i) => i.bucket === "completed"), "Closed inspections")} />
-        <Counter label="In Progress" value={o.in_progress} color="bg-amber-50 text-amber-700 border-amber-200" onClick={() => openDrill(agg.items.filter((i) => i.bucket === "in_progress"), "In Progress inspections")} />
-        <Counter label="Open" value={o.open} color="bg-slate-50 text-slate-600 border-slate-200" onClick={() => openDrill(agg.items.filter((i) => i.bucket === "open"), "Open inspections")} />
+        <Counter label="Total" value={o.total} color="bg-white border-slate-200 text-slate-900" onClick={() => openDrill(agg.items, "All inspections")} />
+        <Counter label="Closed" value={o.completed} color="bg-emerald-50 border-emerald-200 text-emerald-700" onClick={() => openDrill(agg.items.filter((i) => i.bucket === "completed"), "Closed inspections")} />
+        <Counter label="In Progress" value={o.in_progress} color="bg-amber-50 border-amber-200 text-amber-700" onClick={() => openDrill(agg.items.filter((i) => i.bucket === "in_progress"), "In Progress inspections")} />
+        <Counter label="Open" value={o.open} color="bg-slate-50 border-slate-200 text-slate-600" onClick={() => openDrill(agg.items.filter((i) => i.bucket === "open"), "Open inspections")} />
       </div>
 
-      {/* Charts */}
+      {/* Charts: By Building + By Status */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <ChartCard title="By Building">
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={buildingData} margin={{ top: 10, right: 10, left: -20, bottom: 60 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-35} textAnchor="end" interval={0} />
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={buildingData} margin={{ top: 10, right: 10, left: -10, bottom: 5 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="completed" stackId="a" fill={BUCKET_COLORS.completed} name="Closed" onClick={(d) => openDrill(agg.items.filter((i) => i.building === d.name && i.bucket === "completed"), `${d.name} - Closed`)} cursor="pointer" />
@@ -132,19 +133,42 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </ChartCard>
         <ChartCard title="By Status">
-          <ResponsiveContainer width="100%" height={280}>
+          <ResponsiveContainer width="100%" height={200}>
             <PieChart>
-              <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, value }) => `${name}: ${value}`}>
+              <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40}>
                 {statusData.map((s, i) => <Cell key={i} fill={s.color} onClick={() => openDrill(agg.items.filter((item) => item.bucket === (s.name === "Closed" ? "completed" : s.name === "In Progress" ? "in_progress" : "open")), s.name)} cursor="pointer" />)}
               </Pie>
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
+          {/* Legend BELOW chart */}
+          <div className="flex justify-center gap-4 mt-2">
+            {statusData.map((s) => (
+              <button key={s.name} onClick={() => openDrill(agg.items.filter((item) => item.bucket === (s.name === "Closed" ? "completed" : s.name === "In Progress" ? "in_progress" : "open")), s.name)} className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
+                {s.name}: {s.value}
+              </button>
+            ))}
+          </div>
         </ChartCard>
       </div>
 
+      {/* By Trade horizontal bar chart */}
+      <ChartCard title="By Trade">
+        <ResponsiveContainer width="100%" height={Math.max(200, tradeData.length * 36)}>
+          <BarChart data={tradeData} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
+            <XAxis type="number" tick={{ fontSize: 11 }} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="completed" stackId="a" fill={BUCKET_COLORS.completed} name="Closed" onClick={(d) => openDrill(agg.items.filter((i) => i.trade === d.name && i.bucket === "completed"), `${d.name} - Closed`)} cursor="pointer" />
+            <Bar dataKey="in_progress" stackId="a" fill={BUCKET_COLORS.in_progress} name="In Progress" onClick={(d) => openDrill(agg.items.filter((i) => i.trade === d.name && i.bucket === "in_progress"), `${d.name} - In Progress`)} cursor="pointer" />
+            <Bar dataKey="open" stackId="a" fill={BUCKET_COLORS.open} name="Open" onClick={(d) => openDrill(agg.items.filter((i) => i.trade === d.name && i.bucket === "open"), `${d.name} - Open`)} cursor="pointer" />
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartCard>
+
       {/* Checklist progress */}
-      <div className="rounded-lg border border-slate-200 bg-white p-4 mb-6">
+      <div className="rounded-lg border border-slate-200 bg-white p-4 mb-6 mt-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-semibold text-slate-700">Checklist Progress</span>
           <span className="font-mono text-2xl font-bold text-emerald-600">{agg.checklistProgress}%</span>
@@ -164,7 +188,7 @@ export default function Dashboard() {
 
 function Counter({ label, value, color, onClick }) {
   return (
-    <button onClick={onClick} className={`rounded-lg border p-4 text-left transition-transform active:scale-95 ${color}`}>
+    <button onClick={onClick} className={`rounded-lg border p-4 text-left transition-transform active:scale-95 touch-manipulation ${color}`}>
       <div className="text-3xl font-bold font-mono">{value}</div>
       <div className="text-xs font-semibold uppercase tracking-wide opacity-70">{label}</div>
     </button>
@@ -235,7 +259,7 @@ function ActivityGraph({ activity, range, setRange }) {
         <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500">Project Activity</h3>
         <div className="flex overflow-hidden rounded-lg border border-slate-200">
           {["7", "30", "90"].map((r) => (
-            <button key={r} onClick={() => setRange(r)} className={`px-3 py-1.5 text-xs font-semibold ${range === r ? "bg-slate-900 text-white" : "bg-white text-slate-600"}`}>
+            <button key={r} onClick={() => setRange(r)} className={`px-3 py-1.5 text-xs font-semibold touch-manipulation ${range === r ? "bg-slate-900 text-white" : "bg-white text-slate-600"}`}>
               {r === "90" ? "All" : `Last ${r}d`}
             </button>
           ))}
@@ -243,7 +267,7 @@ function ActivityGraph({ activity, range, setRange }) {
       </div>
       <div className="flex items-end gap-1 h-40 overflow-x-auto">
         {buckets.map((b) => (
-          <button key={b.date.toISOString()} onClick={() => setDayDetail(b)} className="flex flex-1 flex-col items-center gap-1 min-w-[20px] group">
+          <button key={b.date.toISOString()} onClick={() => setDayDetail(b)} className="flex flex-1 flex-col items-center gap-1 min-w-[20px] group touch-manipulation">
             <div className="flex flex-col items-center justify-end h-32 gap-px w-full">
               <div className="w-full rounded-t bg-emerald-400 group-hover:bg-emerald-500" style={{ height: `${(b.completed / maxVal) * 100}%`, minHeight: b.completed > 0 ? "4px" : "0" }} title={`Completed: ${b.completed}`} />
               <div className="w-full bg-amber-400 group-hover:bg-amber-500" style={{ height: `${(b.in_progress / maxVal) * 100}%`, minHeight: b.in_progress > 0 ? "4px" : "0" }} title={`In Progress: ${b.in_progress}`} />

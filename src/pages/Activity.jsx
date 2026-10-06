@@ -4,6 +4,7 @@ import { useQaData } from "@/lib/QaDataContext";
 import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import { Activity as ActivityIcon, Loader2 } from "lucide-react";
+import { readAll } from "@/components/qa/paging";
 
 export default function Activity() {
   const { project } = useQaData();
@@ -15,8 +16,8 @@ export default function Activity() {
   useEffect(() => {
     if (!project?.id) return;
     setLoading(true);
-    base44.entities.Activity.filter({ project_id: project.id }).then((all) => {
-      setItems((Array.isArray(all) ? all : []).sort((a, b) => new Date(b.created_at || b.created_date) - new Date(a.created_at || a.created_date)));
+    readAll("Activity", { project_id: project.id }).then((all) => {
+      setItems(all.sort((a, b) => new Date(b.created_at || b.created_date) - new Date(a.created_at || a.created_date)));
     }).catch(console.error).finally(() => setLoading(false));
   }, [project?.id]);
 

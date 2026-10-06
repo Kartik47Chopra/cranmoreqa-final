@@ -12,7 +12,7 @@ const TYPE_ICON = {
 
 function TreeBranch({ loc, tree, depth, selectedId, onSelect }) {
   const [open, setOpen] = useState(depth < 2);
-  const children = tree[loc.id] || [];
+  const children = tree[loc.original_id] || [];
   const hasChildren = children.length > 0;
   const Icon = TYPE_ICON[loc.type] || MapPin;
   const selected = selectedId === loc.id;

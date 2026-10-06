@@ -6,12 +6,12 @@ export default function PageShell({ title, subtitle, actions, children, loading 
   return (
     <div className="flex h-[100dvh] md:h-full flex-col min-w-0">
       <header className="shrink-0 border-b border-slate-200 bg-white px-4 md:px-6 py-3 md:py-4">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-2">
           <div className="min-w-0">
-            <h1 className="font-display text-xl md:text-2xl font-bold uppercase tracking-tight text-slate-900 truncate">{title}</h1>
-            {subtitle && <p className="text-sm text-muted-foreground mt-0.5 truncate">{subtitle}</p>}
+            <h1 className="font-display text-lg md:text-2xl font-bold uppercase tracking-tight text-slate-900 break-words leading-tight">{title}</h1>
+            {subtitle && <p className="text-sm text-muted-foreground mt-1 truncate">{subtitle}</p>}
           </div>
-          {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+          {actions && <div className="flex shrink-0 items-center gap-2 flex-wrap">{actions}</div>}
         </div>
       </header>
       <div className="flex-1 overflow-y-auto bg-slate-50 px-4 md:px-6 py-4">

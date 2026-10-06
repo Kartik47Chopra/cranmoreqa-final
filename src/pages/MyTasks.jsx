@@ -8,6 +8,7 @@ import { statusBucket, checklistProgress, pct } from "@/lib/qaUtils";
 import StatusBadge from "@/components/StatusBadge";
 import { ListTodo, ChevronRight, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { readAll } from "@/components/qa/paging";
 
 export default function MyTasks() {
   const { project, locationMap } = useQaData();
@@ -23,10 +24,10 @@ export default function MyTasks() {
     setLoading(true);
     Promise.all([
       base44.entities.Task.filter({ project_id: project.id, assigned_to: user.id }),
-      base44.entities.Visi.filter({ project_id: project.id, assignee_company_id: user.data?.company_id }),
+      readAll("Visi", { project_id: project.id, assignee_company_id: user.data?.company_id }),
     ]).then(([t, v]) => {
       setTasks((Array.isArray(t) ? t : []).filter((x) => !x.is_deleted));
-      setVisis((Array.isArray(v) ? v : []).filter((x) => !x.is_deleted));
+      setVisis(v.filter((x) => !x.is_deleted));
     }).catch(console.error).finally(() => setLoading(false));
   }, [project?.id, user?.id]);
 

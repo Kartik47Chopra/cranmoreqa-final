@@ -9,6 +9,7 @@ import { statusBucket, checklistProgress, pct } from "@/lib/qaUtils";
 import StatusBadge from "@/components/StatusBadge";
 import { ListChecks, ChevronRight, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { readAll } from "@/components/qa/paging";
 
 // Your List: a personal working list. The user pins inspections they want to
 // track. Stored as a simple array of visi IDs on the user's data.
@@ -26,9 +27,9 @@ export default function YourList() {
     const ids = (user.data?.pinned_visis || []).filter((id) => id);
     setPinned(ids);
     if (ids.length === 0) { setVisis([]); setLoading(false); return; }
-    base44.entities.Visi.filter({ project_id: project.id }).then((all) => {
+    readAll("Visi", { project_id: project.id }).then((all) => {
       const map = {};
-      (Array.isArray(all) ? all : []).forEach((v) => { map[v.id] = v; });
+      all.forEach((v) => { map[v.id] = v; });
       setVisis(ids.map((id) => map[id]).filter(Boolean));
     }).catch(console.error).finally(() => setLoading(false));
   }, [project?.id, user?.id]);
