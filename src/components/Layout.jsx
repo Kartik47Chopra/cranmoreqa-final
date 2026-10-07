@@ -219,7 +219,7 @@ export default function Layout() {
                 ))}
               </div>
             ) : (
-              <LocationTree locations={locations} selectedId={selectedLocId} onSelect={(l) => { navigate(`/location/${l.id}`); setLocSheetOpen(false); }} />
+              <LocationTree mobile locations={locations} selectedId={selectedLocId} onSelect={(l) => { navigate(`/location/${l.id}`); setLocSheetOpen(false); }} />
             )}
           </div>
         </div>

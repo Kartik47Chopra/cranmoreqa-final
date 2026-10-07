@@ -19,12 +19,20 @@ export function QaDataProvider({ children }) {
   const [templates, setTemplates] = useState([]);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
+  const [revision, setRevision] = useState(0);
+  const refreshStats = useCallback(async () => {
+    if (!projectId) return;
+    const res = await base44.functions.invoke('aggregateStats', { project_id: projectId, refresh: true, limit: 50 });
+    setStats(res.data); setRevision(r => r + 1);
+    return res.data;
+  }, [projectId]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [projs, comps, tpls] = await Promise.all([
-        base44.entities.Project.list(),
+        readAll('Project'),
         readAll("Company"),
         readAll("Template"),
       ]);
@@ -51,6 +59,13 @@ export function QaDataProvider({ children }) {
   }, [projectId]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { refreshStats(); }, [refreshStats]);
+  useEffect(() => {
+    const changed = event => { if (event.type !== 'create' && event.type !== 'update' && event.type !== 'delete') return; refreshStats(); };
+    const offVisi = base44.entities.Visi.subscribe(changed);
+    const offLocation = base44.entities.Location.subscribe(event => { changed(event); load(); });
+    return () => { offVisi(); offLocation(); };
+  }, [refreshStats, load]);
 
   const selectProject = useCallback((pid) => {
     localStorage.setItem(PROJECT_KEY, pid);
@@ -65,7 +80,7 @@ export function QaDataProvider({ children }) {
   return (
     <QaDataContext.Provider value={{
       project, projects, companies, companyMap, templates, templateMap,
-      locations, locationMap, loading, selectProject, reload: load,
+      locations, locationMap, loading, selectProject, reload: load, stats, refreshStats, revision,
     }}>
       {children}
     </QaDataContext.Provider>

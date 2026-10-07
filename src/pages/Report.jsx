@@ -28,7 +28,7 @@ export default function Report() {
       .catch(console.error).finally(() => setLoading(false));
   }, [project?.id]);
 
-  const buildings = useMemo(() => locations.filter((l) => !l.parent_id), [locations]);
+  const buildings = useMemo(() => locations.filter((l) => !l.parent_original_id), [locations]);
   const trades = useMemo(() => agg ? Object.keys(agg.byTrade) : [], [agg]);
 
   async function generateClaimPreview() {

@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/AuthContext";
 import { useQueryClient } from '@tanstack/react-query';
 import { readAll } from '@/components/qa/paging';
 import { Download, Eraser, Loader2, FileJson, FileSpreadsheet } from "lucide-react";
+import StandardRoomTool from '@/components/qa/StandardRoomTool';
+import VerifyPanel from '@/components/qa/VerifyPanel';
 
 export default function DataTools() {
   const { project, reload } = useQaData();
@@ -75,7 +77,8 @@ export default function DataTools() {
   const entities = ["Visi", "Location", "Company", "Template", "Document", "Attachment", "Task", "Activity", "Milestone"];
 
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="max-w-4xl space-y-4">
+      {user?.role === 'admin' && <><VerifyPanel /><StandardRoomTool /></>}
       {/* Data Export */}
       <div className="rounded-lg border border-slate-200 bg-white p-4">
         <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-3 flex items-center gap-2">

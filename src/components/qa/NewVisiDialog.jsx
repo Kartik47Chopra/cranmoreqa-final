@@ -1,0 +1,9 @@
+import React, { useState } from 'react';
+import { base44 } from '@/api/base44Client';
+import { useQaData } from '@/lib/QaDataContext';
+export default function NewVisiDialog({ projectId, locationId, onClose }) {
+  const { templates, reload, refreshStats } = useQaData();
+  const [templateId, setTemplateId] = useState(''), [saving, setSaving] = useState(false), [error, setError] = useState('');
+  async function create(e) { e.preventDefault(); if (saving) return; setSaving(true); setError(''); try { await base44.functions.invoke('createStandardLocations', { project_id: projectId, location_id: locationId, kind: 'visi', template_id: templateId }); await refreshStats(); await reload(); onClose(); } catch (e) { setError(e.message); } finally { setSaving(false); } }
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/50 p-4"><form onSubmit={create} className="w-full max-w-sm rounded-lg bg-card p-6 space-y-4"><h3 className="font-heading font-bold">New Visi</h3><select required value={templateId} onChange={e => setTemplateId(e.target.value)} className="w-full rounded border border-input p-2.5"><option value="">Select template...</option>{templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select>{error && <p className="text-sm text-destructive" role="alert">{error}</p>}<div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={onClose} className="rounded border border-border px-4 py-2">Cancel</button><button disabled={saving || !templateId} className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50">{saving ? 'Creating...' : 'Create'}</button></div></form></div>;
+}

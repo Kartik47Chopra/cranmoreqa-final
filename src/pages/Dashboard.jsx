@@ -91,8 +91,8 @@ export default function Dashboard() {
   );
 
   const o = agg.overall;
-  const buildingData = Object.entries(agg.byBuilding).map(([name, c]) => ({ name, ...c })).sort((a, b) => b.total - a.total);
-  const tradeData = Object.entries(agg.byTrade).map(([name, c]) => ({ name, ...c })).sort((a, b) => b.total - a.total);
+  const buildingData = Object.entries(agg.byBuilding).map(([name, c]) => ({ name, shortName: name.startsWith('General') ? 'General' : name.split(' ·')[0], ...c }));
+  const tradeData = ['Door', 'Entry door', 'Skirting', 'Sanitary', 'Robe Jamb', 'Miscellaneous', 'Utility'].map(name => ({ name, ...agg.byTrade[name] }));
   const statusData = [
     { name: "Closed", value: o.completed, color: BUCKET_COLORS.completed },
     { name: "In Progress", value: o.in_progress, color: BUCKET_COLORS.in_progress },
@@ -123,7 +123,7 @@ export default function Dashboard() {
         <ChartCard title="By Building">
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={buildingData} margin={{ top: 10, right: 10, left: -10, bottom: 5 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />
+              <XAxis dataKey="shortName" tick={{ fontSize: 11 }} interval={0} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="completed" stackId="a" fill={BUCKET_COLORS.completed} name="Closed" onClick={(d) => openDrill(agg.items.filter((i) => i.building === d.name && i.bucket === "completed"), `${d.name} - Closed`)} cursor="pointer" />
@@ -142,7 +142,7 @@ export default function Dashboard() {
             </PieChart>
           </ResponsiveContainer>
           {/* Legend BELOW chart */}
-          <div className="flex justify-center gap-4 mt-2">
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-2">
             {statusData.map((s) => (
               <button key={s.name} onClick={() => openDrill(agg.items.filter((item) => item.bucket === (s.name === "Closed" ? "completed" : s.name === "In Progress" ? "in_progress" : "open")), s.name)} className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
@@ -156,9 +156,9 @@ export default function Dashboard() {
       {/* By Trade horizontal bar chart */}
       <ChartCard title="By Trade">
         <ResponsiveContainer width="100%" height={Math.max(200, tradeData.length * 36)}>
-          <BarChart data={tradeData} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
+          <BarChart data={tradeData} layout="vertical" margin={{ top: 5, right: 8, left: 0, bottom: 5 }}>
             <XAxis type="number" tick={{ fontSize: 11 }} />
-            <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={95} />
             <Tooltip content={<CustomTooltip />} />
             <Bar dataKey="completed" stackId="a" fill={BUCKET_COLORS.completed} name="Closed" onClick={(d) => openDrill(agg.items.filter((i) => i.trade === d.name && i.bucket === "completed"), `${d.name} - Closed`)} cursor="pointer" />
             <Bar dataKey="in_progress" stackId="a" fill={BUCKET_COLORS.in_progress} name="In Progress" onClick={(d) => openDrill(agg.items.filter((i) => i.trade === d.name && i.bucket === "in_progress"), `${d.name} - In Progress`)} cursor="pointer" />
