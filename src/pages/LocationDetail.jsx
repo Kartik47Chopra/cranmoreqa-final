@@ -156,7 +156,7 @@ export default function LocationDetail() {
   const visibleTabs = isRoom ? TABS.filter((t) => t.key !== "overview") : TABS;
 
   return (
-    <div className="flex h-[100dvh] md:h-full flex-col min-w-0">
+    <div className="flex flex-1 min-h-0 flex-col min-w-0">
       {/* Header — phone: 3 rows; desktop: single row */}
       <header className="shrink-0 border-b border-slate-200 bg-white px-4 md:px-6 py-3 md:py-4">
         {/* Row 1: back + breadcrumb */}

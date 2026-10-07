@@ -4,7 +4,7 @@ import React from "react";
 // page scrolls with one finger on mobile — no overflow:hidden on the root.
 export default function PageShell({ title, subtitle, actions, children, loading }) {
   return (
-    <div className="flex h-full min-h-0 flex-col min-w-0">
+    <div className="flex flex-1 min-h-0 flex-col min-w-0">
       <header className="shrink-0 border-b border-slate-200 bg-white px-4 md:px-6 py-3 md:py-4">
         <div className="flex flex-col gap-2">
           <div className="min-w-0">

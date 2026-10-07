@@ -15,5 +15,7 @@ export default defineConfig({
       visualEditAgent: true
     }),
     react(),
-  ]
+  ],
+  // transpile newer syntax so older iPhones (Safari 14+) can run the app
+  build: { target: ['es2019', 'safari14'] },
 });

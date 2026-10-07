@@ -83,11 +83,6 @@ export function QaDataProvider({ children }) {
   useEffect(() => { load(); }, [load]);
   // First stats call uses the server cache (fast). No realtime subscriptions: they recomputed everything on every single change.
   useEffect(() => { refreshStats(false); }, [refreshStats]);
-  useEffect(() => {
-    const onFocus = () => { refreshStats(false); };
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [refreshStats]);
 
   const selectProject = useCallback((pid) => {
     localStorage.setItem(PROJECT_KEY, pid);

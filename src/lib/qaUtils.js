@@ -125,6 +125,22 @@ export function subtreeOriginalIds(locations, rootId) {
   return ids;
 }
 
+// Like subtreeOriginalIds, but skips sub-locations marked N/A (their Visis are not counted); the root itself is always included.
+export function activeSubtreeOriginalIds(locations, rootId) {
+  const byId = Object.fromEntries(locations.map((l) => [l.id, l]));
+  const kids = {};
+  locations.forEach((l) => { if (l.parent_original_id) (kids[l.parent_original_id] = kids[l.parent_original_id] || []).push(l); });
+  const ids = [];
+  const root = byId[rootId];
+  if (!root) return ids;
+  (function walk(loc, isRoot) {
+    if (!loc || loc.is_deleted || (!isRoot && loc.status === "na")) return;
+    if (loc.original_id) ids.push(loc.original_id);
+    (kids[loc.original_id] || []).forEach((c) => walk(c, false));
+  })(root, true);
+  return ids;
+}
+
 export function topLocation(locations, id) {
   const byId = Object.fromEntries(locations.map((l) => [l.id, l]));
   const byOrig = {};

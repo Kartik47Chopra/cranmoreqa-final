@@ -67,7 +67,7 @@ export default function Layout() {
   const searchResults = searchQ ? locations.filter((l) => l.name?.toLowerCase().includes(searchQ.toLowerCase()) || l.apt_number?.toLowerCase().includes(searchQ.toLowerCase())).slice(0, 20) : [];
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-background relative">
+    <div className="flex h-app w-full overflow-hidden bg-background relative">
       {drawerOpen && (
         <div className="md:hidden fixed inset-0 z-30 bg-slate-900/50 backdrop-blur-[2px]" onClick={() => setDrawerOpen(false)} />
       )}

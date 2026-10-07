@@ -2,7 +2,7 @@ import { base44 } from '@/api/base44Client';
 export async function readAll(name, query = {}) {
   const records = []; let cursor;
   do {
-    const page = await base44.entities[name].filter(query, { limit: 50, ...(cursor ? { cursor } : {}) });
+    const page = await base44.entities[name].filter(query, { limit: 1000, ...(cursor ? { cursor } : {}) });
     records.push(...page.items);
     if (!page.has_more) break;
     cursor = page.next_cursor;

@@ -6,12 +6,34 @@ import { useNavigate } from 'react-router-dom';
 import StatusBadge from '@/components/StatusBadge';
 import NewVisiDialog from '@/components/qa/NewVisiDialog';
 import { logActivity } from '@/lib/activityLog';
+import { activeSubtreeOriginalIds, checklistProgress, statusBucket } from '@/lib/qaUtils';
 export default function LocationVisis({ locationId, direct = false, toolbar = true }) {
-  const { project, revision, refreshStats } = useQaData(), { user } = useAuth(), navigate = useNavigate();
+  const { project, revision, refreshStats, locations, stats } = useQaData(), { user } = useAuth(), navigate = useNavigate();
   const [data, setData] = useState(null), [items, setItems] = useState([]), [busy, setBusy] = useState(false), [error, setError] = useState(''), [showNew, setShowNew] = useState(false);
   const [bucket, setBucket] = useState(''), [type, setType] = useState(''), [sort, setSort] = useState('updated');
   const manage = ['admin', 'pm'].includes(user?.role);
-  async function load(cursor = null) { setBusy(true); setError(''); try { const { data: page } = await base44.functions.invoke('aggregateStats', { project_id: project.id, location_id: locationId, direct, bucket: bucket || undefined, visi_type: type || undefined, sort, cursor, limit: 50 }); setData(page); setItems(prev => cursor ? [...prev, ...page.items] : page.items); } catch (e) { setError(e.message); } finally { setBusy(false); } }
+  // Fast path (default view: all statuses, all types): ONE database page of 50 Visis. Falls back to the full stats call if anything looks off.
+  async function loadFast(cursor) {
+    const root = locations.find((l) => l.id === locationId);
+    const ids = direct ? [root?.original_id].filter(Boolean) : activeSubtreeOriginalIds(locations, locationId);
+    if (!ids.length) return null;
+    const page = await base44.entities.Visi.filter({ project_id: project.id, location_original_id: { $in: ids } }, { limit: 50, sort: sort === 'code' ? 'code' : '-last_updated', ...(cursor ? { cursor } : {}) });
+    const byOrig = Object.fromEntries(locations.map((l) => [l.original_id, l]));
+    const rows = (page.items || []).filter((v) => !v.is_deleted).map((v) => ({ ...v, location_name: byOrig[v.location_original_id]?.name || '', ...checklistProgress(v), bucket: statusBucket(v) }));
+    const expected = direct ? stats?.byLocation?.[locationId]?.total : stats?.subtreeCounts?.[locationId]?.total;
+    if (!cursor && rows.length === 0 && expected > 0) return null;
+    return { rows, data: { totalItems: expected ?? rows.length, has_more: !!page.has_more, next_cursor: page.next_cursor || null } };
+  }
+  async function load(cursor = null) {
+    setBusy(true); setError('');
+    try {
+      if (!bucket && !type) {
+        try { const fast = await loadFast(cursor); if (fast) { setData(fast.data); setItems((prev) => cursor ? [...prev, ...fast.rows] : fast.rows); setBusy(false); return; } } catch (e) { console.warn('fast list failed, using stats', e); }
+      }
+      await loadSlow(cursor);
+    } finally { setBusy(false); }
+  }
+  async function loadSlow(cursor = null) { try { const { data: page } = await base44.functions.invoke('aggregateStats', { project_id: project.id, location_id: locationId, direct, bucket: bucket || undefined, visi_type: type || undefined, sort, cursor, limit: 50 }); setData(page); setItems(prev => cursor ? [...prev, ...page.items] : page.items); } catch (e) { setError(e.message); } finally { setBusy(false); } }
   useEffect(() => { if (project) load(); }, [project?.id, locationId, direct, bucket, type, sort, revision]);
   async function action(v, remove) { if (busy) return; if (remove && !confirm(`Delete Visi ${v.code}?`)) return; setBusy(true); try { await base44.entities.Visi.update(v.id, remove ? { is_deleted: true, deleted_at: new Date().toISOString(), deleted_by: user.id } : { override_status: 'none', override_comment: '', last_updated: new Date().toISOString() }); await logActivity({ project_id: project.id, visi_id: v.id, user: user.full_name || user.email, text: remove ? `Deleted Visi ${v.code}` : `Unmarked N/A: ${v.code}`, type: remove ? 'delete' : 'status' }); await refreshStats(); } finally { setBusy(false); } }
   return <div className="space-y-3">
