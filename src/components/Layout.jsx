@@ -35,7 +35,7 @@ const BOTTOM_NAV = [
 
 export default function Layout() {
   const { user } = useAuth();
-  const { project, projects, companyMap, locations, loading, selectProject } = useQaData();
+  const { project, projects, companyMap, locations, loading, loadError, reload, selectProject } = useQaData();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [askAIOpen, setAskAIOpen] = useState(false);
@@ -67,7 +67,7 @@ export default function Layout() {
   const searchResults = searchQ ? locations.filter((l) => l.name?.toLowerCase().includes(searchQ.toLowerCase()) || l.apt_number?.toLowerCase().includes(searchQ.toLowerCase())).slice(0, 20) : [];
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background relative">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-background relative">
       {drawerOpen && (
         <div className="md:hidden fixed inset-0 z-30 bg-slate-900/50 backdrop-blur-[2px]" onClick={() => setDrawerOpen(false)} />
       )}
@@ -146,7 +146,7 @@ export default function Layout() {
           </nav>
           <div className="px-2 pb-4 mt-1">
             <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Locations</div>
-            {loading ? <div className="px-3 py-2 text-xs text-slate-500">Loading…</div> : locations.length === 0 ? <div className="px-3 py-2 text-xs text-slate-500">No locations yet.</div> : <LocationTree locations={locations} selectedId={selectedLocId} onSelect={(l) => { navigate(`/location/${l.id}`); setDrawerOpen(false); }} />}
+            {loading && locations.length === 0 ? <div className="px-3 py-2 text-xs text-slate-500">Loading…</div> : locations.length === 0 && loadError ? <div className="px-3 py-2 text-xs text-amber-400">Could not load locations. <button onClick={() => reload()} className="underline font-semibold">Retry</button></div> : locations.length === 0 ? <div className="px-3 py-2 text-xs text-slate-500">No locations yet.</div> : <LocationTree locations={locations} selectedId={selectedLocId} onSelect={(l) => { navigate(`/location/${l.id}`); setDrawerOpen(false); }} />}
           </div>
         </div>
 
@@ -217,6 +217,11 @@ export default function Layout() {
                 {searchResults.map((l) => (
                   <button key={l.id} onClick={() => { navigate(`/location/${l.id}`); setLocSheetOpen(false); setSearchQ(""); }} className="w-full text-left px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-md truncate touch-manipulation">{l.name}</button>
                 ))}
+              </div>
+            ) : locations.length === 0 ? (
+              <div className="p-4 text-sm text-slate-500">
+                {loadError ? "Could not load locations." : loading ? "Loading…" : "No locations yet."}
+                {loadError && <button onClick={() => reload()} className="ml-2 font-semibold text-emerald-700 underline">Retry</button>}
               </div>
             ) : (
               <LocationTree mobile locations={locations} selectedId={selectedLocId} onSelect={(l) => { navigate(`/location/${l.id}`); setLocSheetOpen(false); }} />

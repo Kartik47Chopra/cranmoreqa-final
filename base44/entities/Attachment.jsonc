@@ -20,6 +20,9 @@
     "file_uri": {
       "type": "string"
     },
+    "thumb_uri": {
+      "type": "string"
+    },
     "original_filename": {
       "type": "string"
     },

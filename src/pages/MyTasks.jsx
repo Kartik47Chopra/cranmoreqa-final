@@ -24,7 +24,7 @@ export default function MyTasks() {
     setLoading(true);
     Promise.all([
       base44.entities.Task.filter({ project_id: project.id, assigned_to: user.id }),
-      readAll("Visi", { project_id: project.id, assignee_company_id: user.data?.company_id }),
+      readAll("Visi", { project_id: project.id, assignee_company_id: user.company_id }),
     ]).then(([t, v]) => {
       setTasks((Array.isArray(t) ? t : []).filter((x) => !x.is_deleted));
       setVisis(v.filter((x) => !x.is_deleted));

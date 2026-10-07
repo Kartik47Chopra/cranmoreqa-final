@@ -15,7 +15,7 @@ export function buildStats(visis, locations, filters = {}) {
   const byBuilding = Object.fromEntries(roots.map(l => [l.name, emptyCounts()]));
   const trades = ['Door', 'Entry door', 'Skirting', 'Sanitary', 'Robe Jamb', 'Miscellaneous', 'Utility'];
   const byTrade = Object.fromEntries(trades.map(t => [t, emptyCounts()]));
-  const byLocation = {}, subtreeCounts = Object.fromEntries(locations.filter(l => !l.is_deleted).map(l => [l.id, emptyCounts()]));
+  const byBuildingTrade = {}, byLocation = {}, subtreeCounts = Object.fromEntries(locations.filter(l => !l.is_deleted).map(l => [l.id, emptyCounts()]));
   const overall = emptyCounts(); const items = []; let doneSteps = 0, totalSteps = 0;
   for (const v of visis) {
     const loc = idx.locOf(v), path = idx.ancestors(loc), building = path.at(-1);
@@ -30,10 +30,10 @@ export function buildStats(visis, locations, filters = {}) {
     if (filters.date_to && new Date(v.created_at) > new Date(filters.date_to + 'T23:59:59')) continue;
     const add = counts => { counts.total++; counts[bucket]++; };
     add(overall);
-    const name = building?.name || 'Unknown'; add(byBuilding[name] ||= emptyCounts()); add(byTrade[trade] ||= emptyCounts());
+    const name = building?.name || 'Unknown'; add(byBuilding[name] ||= emptyCounts()); add(byTrade[trade] ||= emptyCounts()); add(((byBuildingTrade[name] ||= {})[trade] ||= emptyCounts()));
     if (loc) { add(byLocation[loc.id] ||= emptyCounts()); for (const l of path) add(subtreeCounts[l.id] ||= emptyCounts()); }
     const progress = checklistProgress(v); doneSteps += progress.done; totalSteps += progress.total;
     items.push({ ...v, location_id: loc?.id || v.location_id, location_name: loc?.name || '', building: name, trade, bucket, done: progress.done, total: progress.total, pct: progress.total ? Math.round(progress.done / progress.total * 100) : 0 });
   }
-  return { overall, byBuilding, byTrade, byLocation, subtreeCounts, checklistProgress: totalSteps ? Math.round(doneSteps / totalSteps * 100) : 0, totalItems: overall.total, items, buildingNames: roots.map(l => l.name), tradeNames: Object.keys(byTrade), rowsRead: { Visi: visis.length, Location: locations.length } };
+  return { overall, byBuilding, byTrade, byBuildingTrade, byLocation, subtreeCounts, checklistProgress: totalSteps ? Math.round(doneSteps / totalSteps * 100) : 0, totalItems: overall.total, items, buildingNames: roots.map(l => l.name), tradeNames: Object.keys(byTrade), rowsRead: { Visi: visis.length, Location: locations.length } };
 }

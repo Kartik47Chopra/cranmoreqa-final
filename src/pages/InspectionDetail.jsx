@@ -313,7 +313,7 @@ export default function InspectionDetail() {
                           </label>
                         </div>
                         {isTask && (
-                          <div className="mt-2 flex items-center gap-2 pl-9">
+                          <div className="mt-2 flex flex-wrap items-center gap-2 pl-3 md:pl-9">
                             <button disabled className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-400 cursor-not-allowed">
                               <Upload size={13} /> Evidence
                             </button>

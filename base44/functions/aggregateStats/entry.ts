@@ -21,12 +21,24 @@ export default async function(req) {
     const entities = elevated ? base44.asServiceRole.entities : base44.entities;
     const key = `${project_id}:${user.id}`;
     let source = CACHE.get(key);
-    if (refresh || !source || Date.now() - source.ts >= 60000) {
+    if (refresh || !source || Date.now() - source.ts >= 300000) {
       const [visis, locations] = await Promise.all([readAll(entities.Visi, { project_id }), readAll(entities.Location, { project_id })]);
       source = { ts: Date.now(), visis, locations };
       CACHE.set(key, source);
     }
     const data = buildStats(source.visis, source.locations, body);
+    // Slim items: keep only what the screens read (steps reduced to their statuses so status badges still work).
+    // Backend functions that need full documents (generatePdf) call buildStats directly.
+    if (!body.full) {
+      data.items = data.items.map((v) => ({
+        id: v.id, code: v.code, trade: v.trade, template_id: v.template_id, template_name: v.template_name, visi_type: v.visi_type, override_status: v.override_status,
+        claimed: v.claimed, assignee_company_id: v.assignee_company_id, fixture_label: v.fixture_label,
+        location_id: v.location_id, location_original_id: v.location_original_id, location_name: v.location_name, building: v.building,
+        bucket: v.bucket, done: v.done, total: v.total, pct: v.pct,
+        created_at: v.created_at, last_updated: v.last_updated, closed_at: v.closed_at,
+        steps: (v.steps || []).map((s) => ({ status: s.status })),
+      }));
+    }
     if (body.limit) {
       const offset = Math.max(0, Number(body.cursor) || 0), limit = Math.min(50, Number(body.limit));
       data.items.sort((a, b) => body.sort === 'code' ? (a.code || '').localeCompare(b.code || '') : new Date(b.last_updated || b.created_at || 0) - new Date(a.last_updated || a.created_at || 0));

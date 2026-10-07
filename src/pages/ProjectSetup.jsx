@@ -8,6 +8,7 @@ import RoleGate from "@/components/RoleGate";
 import { logActivity } from "@/lib/activityLog";
 import { Settings, Building2, FileText, Upload, Trash2, RotateCcw, Plus, Save, Loader2, Database } from "lucide-react";
 import ImportTool from "@/components/ImportTool";
+import PhotoLinkTool from "@/components/qa/PhotoLinkTool";
 import DataTools from "@/components/DataTools";
 
 const TABS = [
@@ -38,7 +39,7 @@ export default function ProjectSetup() {
         {tab === "details" && <DetailsTab />}
         {tab === "locations" && <LocationsTab />}
         {tab === "templates" && <TemplatesTab />}
-        {tab === "import" && <ImportTool />}
+        {tab === "import" && <><ImportTool /><PhotoLinkTool /></>}
         {tab === "deleted" && <DeletedTab />}
         {tab === "data" && <DataTools />}
       </PageShell>
