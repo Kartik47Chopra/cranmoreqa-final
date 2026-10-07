@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQaData } from "@/lib/QaDataContext";
@@ -202,10 +203,10 @@ export default function InspectionDetail() {
   const tradeName = visi.trade || tpl?.name || visi.template_name || "Visi";
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={closeVisi}>
-      <div className="flex h-full w-full md:w-[min(1180px,94vw)] flex-col bg-slate-50 shadow-2xl min-w-0" onClick={(e) => e.stopPropagation()}>
+    createPortal(<div className="fixed left-0 top-0 z-[60] flex h-app w-screen justify-end bg-black/40" onClick={closeVisi}>
+      <div className="flex h-full max-h-full w-full md:w-[min(1180px,94vw)] flex-col bg-slate-50 shadow-2xl min-w-0" onClick={(e) => e.stopPropagation()}>
         {/* Header — sticky */}
-        <header className="shrink-0 border-b border-slate-200 bg-white px-4 md:px-6 py-3 sticky top-0 z-10">
+        <header className="shrink-0 border-b border-slate-200 bg-white px-4 md:px-6 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] z-10">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <button onClick={closeVisi} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"><X size={20} /></button>
             <StatusBadge visi={visi} size="md" />
@@ -495,7 +496,7 @@ export default function InspectionDetail() {
           </div>
         )}
       </div>
-    </div>
+    </div>, document.body)
   );
 }
 

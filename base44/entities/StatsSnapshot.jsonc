@@ -1,0 +1,40 @@
+{
+  "name": "StatsSnapshot",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object"
+    },
+    "computed_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "project_id"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

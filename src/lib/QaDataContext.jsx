@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { readAll } from "@/components/qa/paging";
+import { loadWithRetry, readCache, writeCache } from "@/lib/loadWithRetry";
 
 const QaDataContext = createContext(null);
 
@@ -32,15 +33,16 @@ export function QaDataProvider({ children }) {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState(() => { const p = localStorage.getItem(PROJECT_KEY); return p ? readCache(`cranmore_stats_${p}`) : null; });
   const [revision, setRevision] = useState(0);
   const inflight = useRef(null);
 
   // Stats: one request at a time. force=true recomputes on the server (use after MY OWN change); force=false uses the server cache.
   const fetchStats = useCallback(async (force) => {
     if (!projectId) return null;
-    const res = await withRetry(() => base44.functions.invoke("aggregateStats", { project_id: projectId, refresh: !!force, limit: 50 }));
+    const res = await loadWithRetry(() => base44.functions.invoke("aggregateStats", { project_id: projectId, refresh: !!force }));
     setStats(res.data); setRevision((r) => r + 1);
+    writeCache(`cranmore_stats_${projectId}`, res.data);
     return res.data;
   }, [projectId]);
   const refreshStats = useCallback((force = true) => {
@@ -54,7 +56,7 @@ export function QaDataProvider({ children }) {
     const cached = projectId ? readLocCache(projectId) : null;
     if (cached && cached.length) { setLocations(cached); setLoading(false); } else { setLoading(true); }
     try {
-      const [projs, comps, tpls] = await withRetry(() => Promise.all([readAll("Project"), readAll("Company"), readAll("Template")]));
+      const [projs, comps, tpls] = await loadWithRetry(() => Promise.all([readAll("Project"), readAll("Company"), readAll("Template")]));
       setProjects(projs);
       setCompanies(comps.filter((c) => !c.is_deleted));
       setTemplates(tpls.filter((t) => !t.is_deleted));
@@ -65,7 +67,7 @@ export function QaDataProvider({ children }) {
         setProjectId(pid);
       }
       if (pid) {
-        const locs = await withRetry(() => readAll("Location", { project_id: pid }));
+        const locs = await loadWithRetry(() => readAll("Location", { project_id: pid }));
         const active = locs.filter((l) => !l.is_deleted);
         setLocations(active);
         writeLocCache(pid, active);

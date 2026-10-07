@@ -7,7 +7,8 @@ import EmptyState from "@/components/EmptyState";
 import DrillDownPanel from "@/components/DrillDownPanel";
 import { statusBucket, checklistProgress, pct, STATUS_META } from "@/lib/qaUtils";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { readAll } from "@/components/qa/paging";
+import { loadWithRetry, friendlyError, readCache, writeCache } from "@/lib/loadWithRetry";
+import { filterAgg } from "@/lib/filterAgg";
 import { Building2, Wrench, Calendar, ChevronDown, ChevronUp, Activity as ActivityIcon, Inbox } from "lucide-react";
 
 const BUCKET_COLORS = { completed: "#10b981", in_progress: "#f59e0b", open: "#94a3b8" };
@@ -15,8 +16,11 @@ const BUCKET_COLORS = { completed: "#10b981", in_progress: "#f59e0b", open: "#94
 export default function Dashboard() {
   const { project, locations, loading: dataLoading } = useQaData();
   const { user } = useAuth();
-  const [agg, setAgg] = useState(null);
+  const [rawAgg, setAgg] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [stale, setStale] = useState(false);
+  const [drillLoading, setDrillLoading] = useState(false);
   const [error, setError] = useState(null);
   const [buildingFilter, setBuildingFilter] = useState("");
   const [tradeFilter, setTradeFilter] = useState("");
@@ -32,30 +36,32 @@ export default function Dashboard() {
     return Object.values(byParent);
   }, [locations]);
 
+  const agg = useMemo(() => filterAgg(rawAgg, buildingFilter, tradeFilter), [rawAgg, buildingFilter, tradeFilter]);
+
   const trades = useMemo(() => {
-    if (!agg?.tradeNames) return [];
-    return agg.tradeNames;
-  }, [agg]);
+    if (!rawAgg?.tradeNames) return [];
+    return rawAgg.tradeNames;
+  }, [rawAgg]);
 
   useEffect(() => {
     if (!project?.id) return;
-    setLoading(true);
-    setError(null);
-    base44.functions.invoke("aggregateStats", {
-      project_id: project.id,
-      building_id: buildingFilter || undefined,
-      trade: tradeFilter || undefined,
-    }).then((res) => setAgg(res.data))
-      .catch((e) => setError(e.message || "Failed to load stats"))
+    // Summary only (served from the database snapshot). Drill-downs fetch their own items on demand.
+    const key = `cranmore_dash_${project.id}`;
+    const cached = readCache(key);
+    if (cached) { setAgg(cached); setLoading(false); } else setLoading(true);
+    setError(null); setStale(false);
+    loadWithRetry(() => base44.functions.invoke("aggregateStats", { project_id: project.id }))
+      .then((res) => { setAgg(res.data); writeCache(key, res.data); })
+      .catch((e) => { if (cached) setStale(true); else setError(friendlyError(e)); })
       .finally(() => setLoading(false));
-  }, [project?.id, buildingFilter, tradeFilter]);
+  }, [project?.id, reloadKey]);
 
   useEffect(() => {
     if (!project?.id) return;
     const days = parseInt(range);
     const since = new Date();
     since.setDate(since.getDate() - days);
-    readAll("Activity", { project_id: project.id }).then((all) => {
+    base44.entities.Activity.filter({ project_id: project.id }, "-created_date", 500).then((all) => {
       const filtered = all.filter((a) => {
         const d = a.created_at || a.created_date;
         return d && new Date(d) >= since;
@@ -64,18 +70,21 @@ export default function Dashboard() {
     }).catch(() => {});
   }, [project?.id, range]);
 
-  const openDrill = (items, title) => {
-    setDrillItems(items);
-    setDrillTitle(title);
-    setDrillOpen(true);
+  const openDrill = (f, title) => {
+    setDrillItems([]); setDrillTitle(title); setDrillLoading(true); setDrillOpen(true);
+    loadWithRetry(() => base44.functions.invoke("aggregateStats", {
+      project_id: project.id, building_id: f.building || buildingFilter || undefined, trade: f.trade || tradeFilter || undefined,
+      bucket: f.bucket, limit: 500, sort: "code",
+    })).then((r) => setDrillItems(r.data.items || [])).catch(() => setDrillItems([])).finally(() => setDrillLoading(false));
   };
+  const bk = (name) => (name === "Closed" ? "completed" : name === "In Progress" ? "in_progress" : "open");
 
   if (loading || dataLoading) return <PageShell title="Dashboard" loading />;
   if (error) return (
     <PageShell title="Dashboard">
       <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
         <p className="text-sm text-red-600">{error}</p>
-        <button onClick={() => window.location.reload()} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">Retry</button>
+        <button onClick={() => setReloadKey((k) => k + 1)} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">Retry</button>
       </div>
     </PageShell>
   );
@@ -110,12 +119,13 @@ export default function Dashboard() {
         </div>
       }
     >
+      {stale && <div className="mb-3 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">Could not refresh, showing the last saved numbers. <button onClick={() => setReloadKey((k) => k + 1)} className="font-semibold underline">Retry</button></div>}
       {/* Counters */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <Counter label="Total" value={o.total} color="bg-white border-slate-200 text-slate-900" onClick={() => openDrill(agg.items, "All inspections")} />
-        <Counter label="Closed" value={o.completed} color="bg-emerald-50 border-emerald-200 text-emerald-700" onClick={() => openDrill(agg.items.filter((i) => i.bucket === "completed"), "Closed inspections")} />
-        <Counter label="In Progress" value={o.in_progress} color="bg-amber-50 border-amber-200 text-amber-700" onClick={() => openDrill(agg.items.filter((i) => i.bucket === "in_progress"), "In Progress inspections")} />
-        <Counter label="Open" value={o.open} color="bg-slate-50 border-slate-200 text-slate-600" onClick={() => openDrill(agg.items.filter((i) => i.bucket === "open"), "Open inspections")} />
+        <Counter label="Total" value={o.total} color="bg-white border-slate-200 text-slate-900" onClick={() => openDrill({}, "All inspections")} />
+        <Counter label="Closed" value={o.completed} color="bg-emerald-50 border-emerald-200 text-emerald-700" onClick={() => openDrill({ bucket: "completed" }, "Closed inspections")} />
+        <Counter label="In Progress" value={o.in_progress} color="bg-amber-50 border-amber-200 text-amber-700" onClick={() => openDrill({ bucket: "in_progress" }, "In Progress inspections")} />
+        <Counter label="Open" value={o.open} color="bg-slate-50 border-slate-200 text-slate-600" onClick={() => openDrill({ bucket: "open" }, "Open inspections")} />
       </div>
 
       {/* Charts: By Building + By Status */}
@@ -126,9 +136,9 @@ export default function Dashboard() {
               <XAxis dataKey="shortName" tick={{ fontSize: 11 }} interval={0} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="completed" stackId="a" fill={BUCKET_COLORS.completed} name="Closed" onClick={(d) => openDrill(agg.items.filter((i) => i.building === d.name && i.bucket === "completed"), `${d.name} - Closed`)} cursor="pointer" />
-              <Bar dataKey="in_progress" stackId="a" fill={BUCKET_COLORS.in_progress} name="In Progress" onClick={(d) => openDrill(agg.items.filter((i) => i.building === d.name && i.bucket === "in_progress"), `${d.name} - In Progress`)} cursor="pointer" />
-              <Bar dataKey="open" stackId="a" fill={BUCKET_COLORS.open} name="Open" onClick={(d) => openDrill(agg.items.filter((i) => i.building === d.name && i.bucket === "open"), `${d.name} - Open`)} cursor="pointer" />
+              <Bar dataKey="completed" stackId="a" fill={BUCKET_COLORS.completed} name="Closed" onClick={(d) => openDrill({ building: d.name, bucket: "completed" }, `${d.name} - Closed`)} cursor="pointer" />
+              <Bar dataKey="in_progress" stackId="a" fill={BUCKET_COLORS.in_progress} name="In Progress" onClick={(d) => openDrill({ building: d.name, bucket: "in_progress" }, `${d.name} - In Progress`)} cursor="pointer" />
+              <Bar dataKey="open" stackId="a" fill={BUCKET_COLORS.open} name="Open" onClick={(d) => openDrill({ building: d.name, bucket: "open" }, `${d.name} - Open`)} cursor="pointer" />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -136,7 +146,7 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40}>
-                {statusData.map((s, i) => <Cell key={i} fill={s.color} onClick={() => openDrill(agg.items.filter((item) => item.bucket === (s.name === "Closed" ? "completed" : s.name === "In Progress" ? "in_progress" : "open")), s.name)} cursor="pointer" />)}
+                {statusData.map((s, i) => <Cell key={i} fill={s.color} onClick={() => openDrill({ bucket: bk(s.name) }, s.name)} cursor="pointer" />)}
               </Pie>
               <Tooltip />
             </PieChart>
@@ -144,7 +154,7 @@ export default function Dashboard() {
           {/* Legend BELOW chart */}
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-2">
             {statusData.map((s) => (
-              <button key={s.name} onClick={() => openDrill(agg.items.filter((item) => item.bucket === (s.name === "Closed" ? "completed" : s.name === "In Progress" ? "in_progress" : "open")), s.name)} className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900">
+              <button key={s.name} onClick={() => openDrill({ bucket: bk(s.name) }, s.name)} className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
                 {s.name}: {s.value}
               </button>
@@ -160,9 +170,9 @@ export default function Dashboard() {
             <XAxis type="number" tick={{ fontSize: 11 }} />
             <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={95} />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="completed" stackId="a" fill={BUCKET_COLORS.completed} name="Closed" onClick={(d) => openDrill(agg.items.filter((i) => i.trade === d.name && i.bucket === "completed"), `${d.name} - Closed`)} cursor="pointer" />
-            <Bar dataKey="in_progress" stackId="a" fill={BUCKET_COLORS.in_progress} name="In Progress" onClick={(d) => openDrill(agg.items.filter((i) => i.trade === d.name && i.bucket === "in_progress"), `${d.name} - In Progress`)} cursor="pointer" />
-            <Bar dataKey="open" stackId="a" fill={BUCKET_COLORS.open} name="Open" onClick={(d) => openDrill(agg.items.filter((i) => i.trade === d.name && i.bucket === "open"), `${d.name} - Open`)} cursor="pointer" />
+            <Bar dataKey="completed" stackId="a" fill={BUCKET_COLORS.completed} name="Closed" onClick={(d) => openDrill({ trade: d.name, bucket: "completed" }, `${d.name} - Closed`)} cursor="pointer" />
+            <Bar dataKey="in_progress" stackId="a" fill={BUCKET_COLORS.in_progress} name="In Progress" onClick={(d) => openDrill({ trade: d.name, bucket: "in_progress" }, `${d.name} - In Progress`)} cursor="pointer" />
+            <Bar dataKey="open" stackId="a" fill={BUCKET_COLORS.open} name="Open" onClick={(d) => openDrill({ trade: d.name, bucket: "open" }, `${d.name} - Open`)} cursor="pointer" />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
@@ -181,7 +191,7 @@ export default function Dashboard() {
       {/* Activity graph */}
       <ActivityGraph activity={activity} range={range} setRange={setRange} />
 
-      <DrillDownPanel open={drillOpen} onOpenChange={setDrillOpen} title={drillTitle} items={drillItems} locationMap={Object.fromEntries(locations.map((l) => [l.id, l]))} templateMap={{}} />
+      <DrillDownPanel open={drillOpen} onOpenChange={setDrillOpen} title={drillLoading ? `${drillTitle} (loading…)` : drillTitle} items={drillItems} locationMap={Object.fromEntries(locations.map((l) => [l.id, l]))} templateMap={{}} />
     </PageShell>
   );
 }
