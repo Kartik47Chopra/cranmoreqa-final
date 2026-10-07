@@ -14,11 +14,11 @@ export default async function(req) {
     const duplicate = (rows, field) => { const seen = new Set(), dup = []; for (const r of rows) if (r[field]) { if (seen.has(r[field])) dup.push(r[field]); seen.add(r[field]); } return dup; };
     const codesDup = duplicate(visis, 'code'), origDup = duplicate(visis, 'original_id');
     const deleted = visis.filter(v => v.is_deleted).length;
-    add('T1', 'Full reads and unique identifiers', '1533 Visis (1528 active + 5 deleted); 731 locations; 0 duplicate codes/original IDs', `${visis.length} Visis (${visis.length - deleted} active + ${deleted} deleted); ${locs.length} locations; ${codesDup.length}/${origDup.length} duplicates`, visis.length === 1533 && deleted === 5 && locs.length === 731 && !codesDup.length && !origDup.length);
+    add('T1', 'Full reads and unique identifiers', '1532 Visis (1527 active + 5 deleted); 731 locations; 0 duplicate codes/original IDs', `${visis.length} Visis (${visis.length - deleted} active + ${deleted} deleted); ${locs.length} locations; ${codesDup.length}/${origDup.length} duplicates`, visis.length === 1532 && deleted === 5 && locs.length === 731 && !codesDup.length && !origDup.length);
     const b = stats.byBuilding, o = stats.overall;
     const bCounts = ['RACF · Aged Care Facility','ILA · Independent Living Apartments','General / Whole Site'].map(n => b[n]?.total || 0);
-    add('T2', 'Overall and buildings', '1528 / 0 Closed / 71 In Progress / 1457 Open; 3 buildings: 657 / 870 / 1', `${o.total} / ${o.completed} Closed / ${o.in_progress} In Progress / ${o.open} Open; ${Object.keys(b).length} buildings: ${bCounts.join(' / ')}`, o.total === 1528 && o.completed === 0 && o.in_progress === 71 && o.open === 1457 && Object.keys(b).length === 3 && bCounts.join() === '657,870,1');
-    const trades = ['Door','Entry door','Skirting','Sanitary','Robe Jamb','Miscellaneous','Utility'], expectedTrades = [586,114,469,211,97,11,40];
+    add('T2', 'Overall and buildings', '1527 / 0 Closed / 71 In Progress / 1456 Open; 3 buildings: 657 / 869 / 1', `${o.total} / ${o.completed} Closed / ${o.in_progress} In Progress / ${o.open} Open; ${Object.keys(b).length} buildings: ${bCounts.join(' / ')}`, o.total === 1527 && o.completed === 0 && o.in_progress === 71 && o.open === 1456 && Object.keys(b).length === 3 && bCounts.join() === '657,869,1');
+    const trades = ['Door','Entry door','Skirting','Sanitary','Robe Jamb','Miscellaneous','Utility'], expectedTrades = [585,114,469,211,97,11,40];
     const actualTrades = trades.map(t => stats.byTrade[t]?.total || 0);
     add('T3', 'Trade totals', trades.map((t, i) => `${t} ${expectedTrades[i]}`).join('; '), trades.map((t, i) => `${t} ${actualTrades[i]}`).join('; '), actualTrades.join() === expectedTrades.join());
     const idx = locationIndex(locs);
@@ -27,7 +27,7 @@ export default async function(req) {
     const ilaLevels = ['Ground Floor','First Floor','Second Floor','Roof'].map(n => value('ILA', n));
     const apt = locs.find(l => l.name === 'Apartment 101 · Type 2' && idx.ancestors(l).some(p => p.name === 'First Floor'));
     const aptTotal = stats.subtreeCounts[apt?.id]?.total || 0;
-    add('T4', 'Level and apartment subtree totals', 'RACF 26/28/146/215/216/15/11; ILA 298/288/269/15; Apartment 101 = 18', `RACF ${racfLevels.join('/')}; ILA ${ilaLevels.join('/')}; Apartment 101 = ${aptTotal}`, racfLevels.join() === '26,28,146,215,216,15,11' && ilaLevels.join() === '298,288,269,15' && aptTotal === 18);
+    add('T4', 'Level and apartment subtree totals', 'RACF 26/28/146/215/216/15/11; ILA 297/288/269/15; Apartment 101 = 18', `RACF ${racfLevels.join('/')}; ILA ${ilaLevels.join('/')}; Apartment 101 = ${aptTotal}`, racfLevels.join() === '26,28,146,215,216,15,11' && ilaLevels.join() === '297,288,269,15' && aptTotal === 18);
     const rooms = residentRooms(locs), required = ['Door','Entry door','Skirting','Sanitary'];
     const completeRooms = rooms.filter(l => required.every(t => visis.some(v => !v.is_deleted && v.trade === t && idx.locOf(v)?.id === l.id))).length;
     const room131 = rooms.find(l => l.name === 'Room 131 · P BED (F MIR.)');

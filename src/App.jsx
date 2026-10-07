@@ -26,6 +26,7 @@ import ProjectSetup from '@/pages/ProjectSetup';
 import UserManagement from '@/pages/UserManagement';
 import LocationDetail from '@/pages/LocationDetail';
 import InspectionDetail from '@/pages/InspectionDetail';
+import VisiByCode from '@/pages/VisiByCode';
 
 function QaLayout() {
   return (
@@ -71,6 +72,7 @@ const AppRoutes = () => {
           <Route path="/users" element={<UserManagement />} />
           <Route path="/location/:locationId" element={<LocationDetail />} />
           <Route path="/inspection/:visiId" element={<InspectionDetail />} />
+          <Route path="/visi/:code" element={<VisiByCode />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
