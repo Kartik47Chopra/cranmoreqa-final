@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { readAll } from "@/components/qa/paging";
+import { prepareImage } from "@/lib/imageTools";
 import { Loader2, ImagePlus } from "lucide-react";
 
 // Links photo files to the Attachment records that were imported from the old app.
@@ -19,7 +20,7 @@ export default function PhotoLinkTool() {
     try {
       const byId = {};
       for (const f of files) {
-        const m = f.name.match(/^(.+?)(_thumb)?\.(jpe?g|png)$/i);
+        const m = f.name.match(/^(.+?)(_thumb)?\.(jpe?g|png|webp|gif|heic|heif)$/i);
         if (!m) continue;
         (byId[m[1]] ||= {})[m[2] ? "thumb" : "full"] = f;
       }
@@ -37,6 +38,7 @@ export default function PhotoLinkTool() {
             else if (rec.file_uri && !String(rec.file_uri).startsWith("pending:") && rec.thumb_uri) out.skipped++;
             else {
               const patch = {};
+              if (pair.full && (!/\.jpe?g$/i.test(pair.full.name) || !pair.thumb)) { const prepared = await prepareImage(pair.full); pair.full = prepared.full; pair.thumb = prepared.thumb; }
               if (pair.full) patch.file_uri = (await base44.integrations.Core.UploadPrivateFile({ file: pair.full })).file_uri;
               if (pair.thumb) patch.thumb_uri = (await base44.integrations.Core.UploadPrivateFile({ file: pair.thumb })).file_uri; else out.noThumb++;
               await base44.entities.Attachment.update(rec.id, patch);

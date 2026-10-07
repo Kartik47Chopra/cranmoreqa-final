@@ -8,6 +8,8 @@ import { readAll, openStoredFile } from "@/components/qa/paging";
 import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import { logActivity } from "@/lib/activityLog";
+import { prepareImage } from "@/lib/imageTools";
+import SignedImage from "@/components/qa/SignedImage";
 import {
   CheckCircle2, Circle, Camera, Trash2, ClipboardCheck,
   AlertTriangle, History, X, Loader2, Send, FileText, ExternalLink,
@@ -27,6 +29,7 @@ export default function InspectionDetail() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [photoView, setPhotoView] = useState(null);
+  const [uploadMsg, setUploadMsg] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [comment, setComment] = useState("");
   const [commentSaving, setCommentSaving] = useState(false);
@@ -136,23 +139,33 @@ export default function InspectionDetail() {
     } catch { }
   }
 
-  async function handlePhotoUpload(e) {
+  function closeVisi() {
+    if (window.history.state && window.history.state.idx > 0) { navigate(-1); return; }
+    const loc = locations.find((l) => l.original_id === visi?.location_original_id) || locationMap[visi?.location_id];
+    navigate(loc ? `/location/${loc.id}` : "/", { replace: true });
+  }
+
+  async function handlePhotoUpload(e, step = null) {
     const files = Array.from(e.target.files || []);
+    e.target.value = "";
     if (files.length === 0 || saving) return;
-    setSaving(true);
+    // captured NOW, at the moment of tapping, so a photo can never land on a different Visi
+    const target = { visiId: visi.id, locationId: visi.location_id, projectId: visi.project_id };
+    setSaving(true); setUploadMsg("");
     for (const file of files) {
       try {
-        const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+        const { full, thumb } = await prepareImage(file);
+        const [a, b] = await Promise.all([base44.integrations.Core.UploadPrivateFile({ file: full }), base44.integrations.Core.UploadPrivateFile({ file: thumb })]);
         const att = await base44.entities.Attachment.create({
-          visi_id: visi.id, location_id: visi.location_id, file_uri,
-          original_filename: file.name, content_type: file.type, size: file.size,
-          uploaded_by: user?.id, uploaded_by_company: user?.data?.company_id,
-          uploaded_at: new Date().toISOString(),
+          visi_id: target.visiId, location_id: target.locationId, file_uri: a.file_uri, thumb_uri: b.file_uri,
+          step_id: step?.id, step_label: step ? stepLabel(step) : undefined,
+          original_filename: file.name, content_type: "image/jpeg", size: full.size,
+          uploaded_by: user?.id, uploaded_by_company: user?.company_id, uploaded_at: new Date().toISOString(),
         });
         setAttachments((prev) => [...prev, att]);
-        logActivity({ project_id: visi.project_id, visi_id: visi.id, user: user?.full_name || user?.email, text: `Photo uploaded: ${file.name}`, type: "photo" });
+        logActivity({ project_id: target.projectId, visi_id: target.visiId, user: user?.full_name || user?.email, text: `Photo uploaded: ${file.name}`, type: "photo" });
         refreshActivity();
-      } catch (e) { console.error("upload failed", e); }
+      } catch (err) { console.error("upload failed", err); setUploadMsg(`Could not upload ${file.name}: ${err?.message || "please try again"}`); }
     }
     setSaving(false);
   }
@@ -171,7 +184,7 @@ export default function InspectionDetail() {
   if (error) return (
     <div className="flex flex-col items-center justify-center gap-3 p-8">
       <p className="text-sm text-red-600">{error}</p>
-      <button onClick={() => navigate(-1)} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">Go back</button>
+      <button onClick={closeVisi} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">Go back</button>
     </div>
   );
   if (!visi) return <EmptyState title="Visi not found" />;
@@ -189,15 +202,15 @@ export default function InspectionDetail() {
   const tradeName = visi.trade || tpl?.name || visi.template_name || "Visi";
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={() => navigate(-1)}>
-      <div className="flex h-full w-full md:w-[60%] flex-col bg-slate-50 shadow-2xl min-w-0" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={closeVisi}>
+      <div className="flex h-full w-full md:w-[min(1180px,94vw)] flex-col bg-slate-50 shadow-2xl min-w-0" onClick={(e) => e.stopPropagation()}>
         {/* Header — sticky */}
         <header className="shrink-0 border-b border-slate-200 bg-white px-4 md:px-6 py-3 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"><X size={20} /></button>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <button onClick={closeVisi} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"><X size={20} /></button>
             <StatusBadge visi={visi} size="md" />
-            <div className="min-w-0 flex-1">
-              <h1 className="text-lg font-bold text-slate-900 truncate">
+            <div className="min-w-0 flex-1 max-md:order-last max-md:basis-full">
+              <h1 className="text-lg font-bold text-slate-900 break-words">
                 <span className="font-mono">{visi.code || "—"}</span> <span className="text-slate-700">{tradeName}</span>
               </h1>
               <div className="text-sm text-slate-500 truncate">{visi.visi_type || "Inspection"}</div>
@@ -226,9 +239,9 @@ export default function InspectionDetail() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto bg-slate-50">
-          <div className="mx-auto max-w-5xl grid grid-cols-1 lg:grid-cols-[200px_1fr_260px] gap-4 p-4">
+          <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] xl:grid-cols-[190px_minmax(0,1fr)_260px] gap-4 p-4">
             {/* Left: Checklist navigator */}
-            <div className="hidden lg:block">
+            <div className="hidden xl:block">
               <div className="sticky top-4 rounded-lg border border-slate-200 bg-white p-3">
                 <div className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Checklist</div>
                 <div className="space-y-1">
@@ -272,15 +285,16 @@ export default function InspectionDetail() {
                     </>
                   )}
                 </div>
+                {uploadMsg && <p className="mb-2 text-xs text-red-600" role="alert">{uploadMsg}</p>}
                 {attachments.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-400">No photos yet.</div>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {attachments.map((a) => (
                       <div key={a.id} className="group relative overflow-hidden rounded-lg border border-slate-200">
-                        <img src={a.file_uri} alt={a.original_filename} className="aspect-square w-full object-cover cursor-pointer" onClick={() => setPhotoView(a)} />
+                        <SignedImage uri={a.thumb_uri || a.file_uri} alt={a.original_filename} className="aspect-square w-full object-cover cursor-pointer" onClick={() => setPhotoView(a)} />
                         {canManage && (
-                          <button onClick={() => setShowDeleteConfirm(a)} className="absolute top-1 right-1 rounded-full bg-red-500 p-1.5 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => setShowDeleteConfirm(a)} className="absolute top-1 right-1 rounded-full bg-red-500 p-1.5 text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                             <Trash2 size={12} />
                           </button>
                         )}
@@ -309,7 +323,7 @@ export default function InspectionDetail() {
                           {isTask && <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-700">Task</span>}
                           <label className="cursor-pointer p-1.5 rounded text-slate-400 hover:bg-slate-100">
                             <Camera size={16} />
-                            <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={saving} />
+                            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoUpload(e, s)} disabled={saving} />
                           </label>
                         </div>
                         {isTask && (
@@ -438,7 +452,7 @@ export default function InspectionDetail() {
         {photoView && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setPhotoView(null)}>
             <button className="absolute top-4 right-4 text-white p-2" onClick={() => setPhotoView(null)}><X size={24} /></button>
-            <img src={photoView.file_uri} alt={photoView.original_filename} className="max-h-[90dvh] max-w-full object-contain" onClick={(e) => e.stopPropagation()} />
+            <SignedImage uri={photoView.file_uri} alt={photoView.original_filename} className="max-h-[90dvh] max-w-full object-contain" onClick={(e) => e.stopPropagation()} />
           </div>
         )}
 
