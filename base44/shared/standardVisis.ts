@@ -29,19 +29,41 @@ export function residentRooms(locations) {
   return locations.filter(l => l.type === 'Room' && /^Room \d+/.test(l.name || '') && !idx.ancestors(l).some(p => p.is_deleted || p.status === 'na') && idx.buildingOf(l)?.name.startsWith('RACF'))
     .sort((a, b) => { const pa = idx.ancestors(a), pb = idx.ancestors(b); return (pa.at(-2)?.order || 0) - (pb.at(-2)?.order || 0) || (pa.at(-2)?.name || '').localeCompare(pb.at(-2)?.name || '') || Number(a.name.match(/^Room (\d+)/)[1]) - Number(b.name.match(/^Room (\d+)/)[1]); });
 }
+export function missingLocations(locations) {
+  // Resident room numbers missing from a floor's sequence (e.g. 124, 224) and a second-floor "Pantry - East".
+  const rooms = residentRooms(locations), floors = new Map();
+  for (const r of rooms) { const f = r.parent_original_id; if (!floors.has(f)) floors.set(f, []); floors.get(f).push(r); }
+  const out = [];
+  for (const [floorOid, list] of floors) {
+    const nums = list.map(r => Number(r.name.match(/^Room (\d+)/)[1])), have = new Set(nums);
+    const floor = locations.find(l => l.original_id === floorOid);
+    for (let n = Math.min(...nums); n <= Math.max(...nums); n++) if (!have.has(n)) out.push({ name: `Room ${n}`, type: 'Room', trades: standardTrades(`Room ${n}`, true), parent: floor });
+    const sibs = locations.filter(l => l.parent_original_id === floorOid && !l.is_deleted);
+    if (/second/i.test(floor?.name || '') && !sibs.some(l => /pantry\s*-\s*east/i.test(l.name))) out.push({ name: 'Pantry - East', type: 'Room', trades: ['Door', 'Skirting', 'Sanitary'], parent: floor });
+  }
+  return out;
+}
 export async function ensureRooms(entities, project_id, user, preview = false) {
   const [visis, locations] = await Promise.all([readAll(entities.Visi), readAll(entities.Location, { project_id })]);
-  const rooms = residentRooms(locations), idx = locationIndex(locations), trades = ['Door', 'Entry door', 'Skirting', 'Sanitary'];
+  const trades = ['Door', 'Entry door', 'Skirting', 'Sanitary'], plan = missingLocations(locations);
+  const rooms = residentRooms(locations), idx = locationIndex(locations);
   const missing = Object.fromEntries(trades.map(t => [t, rooms.filter(l => !visis.some(v => !v.is_deleted && v.trade === t && idx.locOf(v)?.id === l.id))]));
-  const counts = Object.fromEntries(trades.map(t => [t, missing[t].length]));
-  if (preview) return { rooms_found: rooms.length, would_create: counts, total: Object.values(counts).reduce((a, b) => a + b, 0) };
+  const counts = Object.fromEntries(trades.map(t => [t, missing[t].length + plan.filter(p => p.trades.includes(t)).length]));
+  if (preview) return { rooms_found: rooms.length, rooms_to_add: plan.map(p => `${p.name} (${p.parent?.name})`), would_create: counts, total: Object.values(counts).reduce((a, b) => a + b, 0) };
+  const created = [];
+  for (const p of plan) {
+    const siblings = locations.filter(l => l.parent_original_id === p.parent.original_id).length;
+    const loc = await entities.Location.create({ project_id, parent_original_id: p.parent.original_id, parent_id: p.parent.id, name: p.name, type: p.type, order: siblings, original_id: crypto.randomUUID(), status: 'active', is_deleted: false });
+    created.push({ loc, trades: p.trades });
+  }
   const records = [];
   for (const trade of trades) {
-    if (!missing[trade].length) continue;
+    const targets = [...missing[trade], ...created.filter(c => c.trades.includes(trade)).map(c => c.loc)];
+    if (!targets.length) continue;
     const source = visis.find(v => !v.is_deleted && v.project_id === project_id && v.trade === trade);
-    const codes = await allocateCodes(entities, TRADE_PREFIX[trade], missing[trade].length, visis);
-    missing[trade].forEach((l, i) => records.push(makeVisi(source, l, codes[i], user)));
+    const codes = await allocateCodes(entities, TRADE_PREFIX[trade], targets.length, visis);
+    targets.forEach((l, i) => records.push(makeVisi(source, l, codes[i], user)));
   }
   for (let i = 0; i < records.length; i += 100) await retry(() => entities.Visi.bulkCreate(records.slice(i, i + 100)));
-  return { rooms_found: rooms.length, created: counts, total_created: records.length };
+  return { rooms_found: rooms.length, rooms_added: created.map(c => c.loc.name), created: counts, total_created: records.length };
 }

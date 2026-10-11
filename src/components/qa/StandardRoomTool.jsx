@@ -12,8 +12,8 @@ export default function StandardRoomTool() {
   return <section className="rounded-lg border border-border bg-card p-4 space-y-3">
     <h3 className="font-semibold">Standard RACF room Visis</h3>
     <button disabled={busy || !project} onClick={() => run(true)} className="rounded bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50">{busy ? 'Checking...' : 'Add standard Visis to RACF rooms'}</button>
-    {preview && <div className="space-y-2 text-sm"><p>Rooms found: {preview.rooms_found}</p>{Object.entries(preview.would_create).map(([trade, n]) => <p key={trade}>{trade}: {n} to create</p>)}<button disabled={busy} onClick={() => run(false)} className="rounded bg-primary px-3 py-2 text-primary-foreground">Confirm additions</button></div>}
-    {result && <p className="text-sm">{result.rooms_found} rooms checked; {result.total_created} Visis created.</p>}
+    {preview && <div className="space-y-2 text-sm"><p>Rooms found: {preview.rooms_found}</p>{preview.rooms_to_add?.length > 0 && <p>New rooms: {preview.rooms_to_add.join(', ')}</p>}{Object.entries(preview.would_create).map(([trade, n]) => <p key={trade}>{trade}: {n} to create</p>)}<button disabled={busy} onClick={() => run(false)} className="rounded bg-primary px-3 py-2 text-primary-foreground">Confirm additions</button></div>}
+    {result && <p className="text-sm">{result.rooms_found} rooms checked; {result.rooms_added?.length || 0} rooms added; {result.total_created} Visis created.</p>}
     {error && <p role="alert" className="text-destructive">{error}</p>}
   </section>;
 }
