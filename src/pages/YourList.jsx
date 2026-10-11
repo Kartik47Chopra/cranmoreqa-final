@@ -27,7 +27,7 @@ export default function YourList() {
     const ids = (user.data?.pinned_visis || []).filter((id) => id);
     setPinned(ids);
     if (ids.length === 0) { setVisis([]); setLoading(false); return; }
-    readAll("Visi", { project_id: project.id }).then((all) => {
+    readAll("Visi", { id: { $in: ids } }).then((all) => {
       const map = {};
       all.forEach((v) => { map[v.id] = v; });
       setVisis(ids.map((id) => map[id]).filter(Boolean));

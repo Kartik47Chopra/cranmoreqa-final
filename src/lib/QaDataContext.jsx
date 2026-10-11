@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { readAll } from "@/components/qa/paging";
+import { useAuth } from "@/lib/AuthContext";
 import { loadWithRetry, readCache, writeCache } from "@/lib/loadWithRetry";
 
 const QaDataContext = createContext(null);
@@ -36,6 +37,7 @@ export function QaDataProvider({ children }) {
   const [stats, setStats] = useState(() => { const p = localStorage.getItem(PROJECT_KEY); return p ? readCache(`cranmore_stats_${p}`) : null; });
   const [revision, setRevision] = useState(0);
   const inflight = useRef(null);
+  const { user } = useAuth();
 
   // Stats: one request at a time. force=true recomputes on the server (use after MY OWN change); force=false uses the server cache.
   const fetchStats = useCallback(async (force) => {
@@ -85,6 +87,23 @@ export function QaDataProvider({ children }) {
   useEffect(() => { load(); }, [load]);
   // First stats call uses the server cache (fast). No realtime subscriptions: they recomputed everything on every single change.
   useEffect(() => { refreshStats(false); }, [refreshStats]);
+
+  // One-time standard room setup (admin only): adds missing rooms (124, 224, Pantry - East) and the Entry door / Sanitary Visis. Safe to repeat: it only adds what is missing.
+  useEffect(() => {
+    if (!projectId || user?.role !== "admin" || loading) return;
+    const flag = `cranmore_rooms_v2_${projectId}`;
+    if (localStorage.getItem(flag)) return;
+    (async () => {
+      try {
+        const pre = (await base44.functions.invoke("ensureStandardRoomVisis", { project_id: projectId, preview: true })).data;
+        if (pre?.total > 0) {
+          await base44.functions.invoke("ensureStandardRoomVisis", { project_id: projectId, preview: false });
+          await refreshStats(true); await load();
+        }
+        localStorage.setItem(flag, "1");
+      } catch (e) { console.error("standard room setup", e); }
+    })();
+  }, [projectId, user?.role, loading, refreshStats, load]);
 
   const selectProject = useCallback((pid) => {
     localStorage.setItem(PROJECT_KEY, pid);

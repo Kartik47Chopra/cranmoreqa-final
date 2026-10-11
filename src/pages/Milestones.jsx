@@ -7,28 +7,24 @@ import EmptyState from "@/components/EmptyState";
 import RoleGate from "@/components/RoleGate";
 import { statusBucket, checklistProgress, pct } from "@/lib/qaUtils";
 import { Milestone as MilestoneIcon, Plus, Loader2, X, Calendar } from "lucide-react";
-import { readAll } from "@/components/qa/paging";
+import { useVisis } from "@/lib/useVisis";
 
 export default function Milestones() {
   const { project, locations, locationMap } = useQaData();
   const { user } = useAuth();
   const [milestones, setMilestones] = useState([]);
-  const [visis, setVisis] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { visis, loading: visLoading } = useVisis(project?.id);
+  const [msLoading, setMsLoading] = useState(true);
+  const loading = msLoading || visLoading;
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: "", target_date: "" });
   const canEdit = user?.role === "admin" || user?.role === "pm";
 
   useEffect(() => {
     if (!project?.id) return;
-    setLoading(true);
-    Promise.all([
-      base44.entities.Milestone.filter({ project_id: project.id }),
-      readAll("Visi", { project_id: project.id }),
-    ]).then(([m, v]) => {
-      setMilestones(Array.isArray(m) ? m : []);
-      setVisis(v.filter((x) => !x.is_deleted));
-    }).catch(console.error).finally(() => setLoading(false));
+    base44.entities.Milestone.filter({ project_id: project.id })
+      .then((m) => setMilestones(Array.isArray(m) ? m : []))
+      .catch(console.error).finally(() => setMsLoading(false));
   }, [project?.id]);
 
   function milestoneProgress(ms) {

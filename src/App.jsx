@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -13,20 +14,20 @@ import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
-import Dashboard from '@/pages/Dashboard';
-import MyTasks from '@/pages/MyTasks';
-import AssignTasks from '@/pages/AssignTasks';
-import YourList from '@/pages/YourList';
-import Tracker from '@/pages/Tracker';
-import Documents from '@/pages/Documents';
-import Milestones from '@/pages/Milestones';
-import Activity from '@/pages/Activity';
-import Report from '@/pages/Report';
-import ProjectSetup from '@/pages/ProjectSetup';
-import UserManagement from '@/pages/UserManagement';
-import LocationDetail from '@/pages/LocationDetail';
-import InspectionDetail from '@/pages/InspectionDetail';
-import VisiByCode from '@/pages/VisiByCode';
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const MyTasks = lazy(() => import('@/pages/MyTasks'));
+const AssignTasks = lazy(() => import('@/pages/AssignTasks'));
+const YourList = lazy(() => import('@/pages/YourList'));
+const Tracker = lazy(() => import('@/pages/Tracker'));
+const Documents = lazy(() => import('@/pages/Documents'));
+const Milestones = lazy(() => import('@/pages/Milestones'));
+const Activity = lazy(() => import('@/pages/Activity'));
+const Report = lazy(() => import('@/pages/Report'));
+const ProjectSetup = lazy(() => import('@/pages/ProjectSetup'));
+const UserManagement = lazy(() => import('@/pages/UserManagement'));
+const LocationDetail = lazy(() => import('@/pages/LocationDetail'));
+const InspectionDetail = lazy(() => import('@/pages/InspectionDetail'));
+const VisiByCode = lazy(() => import('@/pages/VisiByCode'));
 
 function QaLayout() {
   return (
@@ -52,6 +53,7 @@ const AppRoutes = () => {
   }
 
   return (
+    <Suspense fallback={<div className="fixed inset-0 flex items-center justify-center"><div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div></div>}>
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -77,6 +79,7 @@ const AppRoutes = () => {
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    </Suspense>
   );
 };
 

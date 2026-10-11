@@ -4,7 +4,7 @@ import { useQaData } from "@/lib/QaDataContext";
 import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import { statusBucket, checklistProgress, pct, buildLocationTree, topLocation } from "@/lib/qaUtils";
-import { readAll } from "@/components/qa/paging";
+import { useVisis } from "@/lib/useVisis";
 import { Grid3x3, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -12,18 +12,10 @@ const BUCKET_BG = { completed: "bg-emerald-500", in_progress: "bg-amber-500", op
 
 export default function Tracker() {
   const { project, locations, locationMap, templateMap } = useQaData();
-  const [visis, setVisis] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { visis, loading } = useVisis(project?.id);
   const [buildingFilter, setBuildingFilter] = useState("");
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!project?.id) return;
-    setLoading(true);
-    readAll("Visi", { project_id: project.id }).then((all) => {
-      setVisis(all.filter((v) => !v.is_deleted));
-    }).catch(console.error).finally(() => setLoading(false));
-  }, [project?.id]);
 
   const buildings = useMemo(() => locations.filter((l) => !l.parent_original_id), [locations]);
 

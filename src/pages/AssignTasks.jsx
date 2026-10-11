@@ -10,14 +10,13 @@ import StatusBadge from "@/components/StatusBadge";
 import { logActivity } from "@/lib/activityLog";
 import { ClipboardList, ChevronRight, Loader2, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { readAll } from "@/components/qa/paging";
+import { useVisis } from "@/lib/useVisis";
 
 export default function AssignTasks() {
   const { project, locations, locationMap, companies, companyMap } = useQaData();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [visis, setVisis] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { visis, setVisis, loading } = useVisis(project?.id);
   const [selected, setSelected] = useState(new Set());
   const [assigneeCompany, setAssigneeCompany] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -25,13 +24,6 @@ export default function AssignTasks() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [assigning, setAssigning] = useState(false);
 
-  useEffect(() => {
-    if (!project?.id) return;
-    setLoading(true);
-    readAll("Visi", { project_id: project.id }).then((all) => {
-      setVisis(all.filter((v) => !v.is_deleted));
-    }).catch(console.error).finally(() => setLoading(false));
-  }, [project?.id]);
 
   const buildings = useMemo(() => locations.filter((l) => !l.parent_original_id), [locations]);
 

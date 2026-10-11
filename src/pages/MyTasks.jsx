@@ -8,27 +8,23 @@ import { statusBucket, checklistProgress, pct } from "@/lib/qaUtils";
 import StatusBadge from "@/components/StatusBadge";
 import { ListTodo, ChevronRight, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { readAll } from "@/components/qa/paging";
+import { useVisis } from "@/lib/useVisis";
 
 export default function MyTasks() {
   const { project, locationMap } = useQaData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
-  const [visis, setVisis] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { visis, loading: visLoading } = useVisis(user?.id ? project?.id : null, { assignee_company_id: user?.company_id });
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const loading = tasksLoading || visLoading;
   const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     if (!project?.id || !user?.id) return;
-    setLoading(true);
-    Promise.all([
-      base44.entities.Task.filter({ project_id: project.id, assigned_to: user.id }),
-      readAll("Visi", { project_id: project.id, assignee_company_id: user.company_id }),
-    ]).then(([t, v]) => {
-      setTasks((Array.isArray(t) ? t : []).filter((x) => !x.is_deleted));
-      setVisis(v.filter((x) => !x.is_deleted));
-    }).catch(console.error).finally(() => setLoading(false));
+    base44.entities.Task.filter({ project_id: project.id, assigned_to: user.id })
+      .then((t) => setTasks((Array.isArray(t) ? t : []).filter((x) => !x.is_deleted)))
+      .catch(console.error).finally(() => setTasksLoading(false));
   }, [project?.id, user?.id]);
 
   const filteredVisis = visis.filter((v) => filter === "all" || statusBucket(v) === filter);

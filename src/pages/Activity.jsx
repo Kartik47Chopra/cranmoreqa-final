@@ -16,7 +16,8 @@ export default function Activity() {
   useEffect(() => {
     if (!project?.id) return;
     setLoading(true);
-    readAll("Activity", { project_id: project.id }).then((all) => {
+    base44.entities.Activity.filter({ project_id: project.id }, { limit: 300, sort: "-created_at" }).then((page) => {
+      const all = page.items || [];
       setItems(all.sort((a, b) => new Date(b.created_at || b.created_date) - new Date(a.created_at || a.created_date)));
     }).catch(console.error).finally(() => setLoading(false));
   }, [project?.id]);

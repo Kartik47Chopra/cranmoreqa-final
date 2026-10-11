@@ -72,18 +72,20 @@ export default function LocationDetail() {
 
   useEffect(() => {
     if (!locationId || !project?.id) return;
-    setLoading(true);
+    const origId = locationMap[locationId]?.original_id;
+    // Only this location's records (not the whole project's), and the page never waits on them.
     Promise.all([
       readAll('Attachment', { location_id: locationId }),
-      readAll('Document', { project_id: project.id }),
+      readAll('Document', { project_id: project.id, location_id: locationId }),
+      origId ? readAll('Document', { project_id: project.id, location_original_id: origId }) : Promise.resolve([]),
       readAll('Milestone', { project_id: project.id }),
-    ]).then(([a, d, m]) => {
-      const loc = locationMap[locationId];
+    ]).then(([a, d1, d2, m]) => {
+      const seen = new Set();
       setAttachments(a.filter(x => !x.is_deleted));
-      setDocuments(d.filter(x => !x.is_deleted && (x.location_id === locationId || x.location_original_id === loc?.original_id)));
-      setMilestones(m.filter(x => (x.location_ids || []).includes(locationId) || (x.location_ids || []).includes(loc?.original_id)));
-    }).finally(() => setLoading(false));
-  }, [locationId, project?.id, locations]);
+      setDocuments([...d1, ...d2].filter(x => !x.is_deleted && !seen.has(x.id) && seen.add(x.id)));
+      setMilestones(m.filter(x => (x.location_ids || []).includes(locationId) || (x.location_ids || []).includes(origId)));
+    }).catch(console.error).finally(() => setLoading(false));
+  }, [locationId, project?.id, !!locationMap[locationId]]);
   useEffect(() => { setSubtreeCounts(stats?.subtreeCounts || {}); }, [stats]);
   const loc = locationMap[locationId];
   // Children by parent_original_id
