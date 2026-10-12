@@ -10,6 +10,7 @@ import { Settings, Building2, FileText, Upload, Trash2, RotateCcw, Plus, Save, L
 import ImportTool from "@/components/ImportTool";
 import PhotoLinkTool from "@/components/qa/PhotoLinkTool";
 import PhotoAssignTool from "@/components/qa/PhotoAssignTool";
+import OldSiteProgressTool from "@/components/qa/OldSiteProgressTool";
 import DataTools from "@/components/DataTools";
 
 const TABS = [
@@ -40,7 +41,7 @@ export default function ProjectSetup() {
         {tab === "details" && <DetailsTab />}
         {tab === "locations" && <LocationsTab />}
         {tab === "templates" && <TemplatesTab />}
-        {tab === "import" && <><ImportTool /><PhotoLinkTool /><PhotoAssignTool /></>}
+        {tab === "import" && <><ImportTool /><PhotoLinkTool /><OldSiteProgressTool /><PhotoAssignTool /></>}
         {tab === "deleted" && <DeletedTab />}
         {tab === "data" && <DataTools />}
       </PageShell>
