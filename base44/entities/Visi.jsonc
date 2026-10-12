@@ -213,6 +213,21 @@
           }
         },
         {
+          "user_condition": {
+            "role": "trade"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "viewer"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
           "data.assignee_company_id": "{{user.data.company_id}}"
         },
         {

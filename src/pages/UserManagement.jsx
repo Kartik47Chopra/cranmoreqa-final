@@ -64,7 +64,6 @@ export default function UserManagement() {
           </div>
         </div>
 
-        <p className="mb-3 text-xs text-slate-500">Trade and Viewer users only see Visis for their company, so set a company for every crew member.</p>
         {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
         {/* User list */}
         {loading ? (
@@ -88,7 +87,7 @@ export default function UserManagement() {
                   <option value="trade">Trade</option>
                   <option value="viewer">Viewer</option>
                 </select>
-                <select value={u.company_id || ""} onChange={(e) => save(u, { company_id: e.target.value })} className={`rounded-lg border py-1.5 pl-2 pr-6 text-xs ${!u.company_id && !["admin", "pm"].includes(u.role) ? "border-amber-400 bg-amber-50" : "border-slate-200"}`}>
+                <select value={u.company_id || ""} onChange={(e) => save(u, { company_id: e.target.value })} className="rounded-lg border border-slate-200 py-1.5 pl-2 pr-6 text-xs">
                   <option value="">No company</option>
                   {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
