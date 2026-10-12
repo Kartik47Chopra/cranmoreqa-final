@@ -6,7 +6,7 @@ import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import { statusBucket, checklistProgress, pct } from "@/lib/qaUtils";
 import StatusBadge from "@/components/StatusBadge";
-import { ListTodo, ChevronRight, Loader2 } from "lucide-react";
+import { ListTodo, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useVisis } from "@/lib/useVisis";
 

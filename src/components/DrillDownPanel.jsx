@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useNavigate } from "react-router-dom";
 import { statusBucket, checklistProgress, pct } from "@/lib/qaUtils";
 import StatusBadge from "@/components/StatusBadge";
-import { X, FileBarChart, ChevronRight } from "lucide-react";
+import { FileBarChart, ChevronRight } from "lucide-react";
 
 // Shared drill-down panel: opens from Dashboard counters and chart segments.
 // Shows totals + bucket breakdown + a scrollable list of the actual items.

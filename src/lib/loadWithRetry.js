@@ -19,5 +19,10 @@ export function friendlyError(e) {
   return msg;
 }
 
-export const readCache = (key) => { try { const raw = sessionStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch { return null; } };
-export const writeCache = (key, value) => { try { sessionStorage.setItem(key, JSON.stringify(value)); } catch { /* storage full */ } };
+// Kept in localStorage so a phone reopening the app paints the last data instantly, then refreshes in the background.
+export const readCache = (key) => { try { const raw = localStorage.getItem(key) ?? sessionStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch { return null; } };
+export const writeCache = (key, value) => {
+  const raw = JSON.stringify(value);
+  try { localStorage.setItem(key, raw); return; } catch { /* full: drop other cached lists and try once more */ }
+  try { Object.keys(localStorage).filter((k) => k.startsWith("cranmore_") && k !== key && k !== "cranmore_selected_project" && !k.startsWith("cranmore_rooms_")).forEach((k) => localStorage.removeItem(k)); localStorage.setItem(key, raw); } catch { /* still full: skip caching */ }
+};

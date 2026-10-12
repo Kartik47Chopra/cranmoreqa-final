@@ -3,8 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQaData } from "@/lib/QaDataContext";
 import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
-import { Activity as ActivityIcon, Loader2 } from "lucide-react";
-import { readAll } from "@/components/qa/paging";
+import { Activity as ActivityIcon } from "lucide-react";
 
 export default function Activity() {
   const { project } = useQaData();

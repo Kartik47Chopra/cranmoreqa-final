@@ -7,6 +7,8 @@ import oldSite from "@/data/oldSiteProgress.json";
 import { Loader2, ImagePlus } from "lucide-react";
 
 const oldPhotoById = Object.fromEntries(oldSite.photos.map((p) => [p.id, p]));
+const retry = async (fn, tries = 3) => { for (let i = 1; ; i++) { try { return await fn(); } catch (e) { if (i >= tries) throw e; await new Promise((r) => setTimeout(r, 1500 * i)); } } };
+const upload = (file) => retry(() => base44.integrations.Core.UploadPrivateFile({ file })).then((r) => r.file_uri);
 
 // Links photo files from the old app to their Visis.
 // Files are named "<original_id>.jpg" (full size) and "<original_id>_thumb.jpg" (about 400 px thumbnail).
@@ -49,15 +51,15 @@ export default function PhotoLinkTool() {
             else {
               const patch = {};
               if (pair.full && (!/\.jpe?g$/i.test(pair.full.name) || !pair.thumb)) { const prepared = await prepareImage(pair.full); pair.full = prepared.full; pair.thumb = prepared.thumb; }
-              if (pair.full) patch.file_uri = (await base44.integrations.Core.UploadPrivateFile({ file: pair.full })).file_uri;
-              if (pair.thumb) patch.thumb_uri = (await base44.integrations.Core.UploadPrivateFile({ file: pair.thumb })).file_uri; else out.noThumb++;
+              if (pair.full) patch.file_uri = await upload(pair.full);
+              if (pair.thumb) patch.thumb_uri = await upload(pair.thumb); else out.noThumb++;
               if (visi && !rec?.visi_id) { patch.visi_id = visi.id; patch.location_id = visi.location_id; }
-              if (rec) { await base44.entities.Attachment.update(rec.id, patch); out.linked++; }
+              if (rec) { await retry(() => base44.entities.Attachment.update(rec.id, patch)); out.linked++; }
               else {
-                await base44.entities.Attachment.create({
+                await retry(() => base44.entities.Attachment.create({
                   ...patch, original_id: id, original_filename: old.name, content_type: "image/jpeg", size: old.size,
                   step_label: old.step || undefined, uploaded_by: "Site Factory Admin", uploaded_at: old.at, is_deleted: false,
-                });
+                }), 1);
                 out.created++;
               }
             }

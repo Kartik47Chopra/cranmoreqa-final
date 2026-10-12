@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { base44 } from "@/api/base44Client";
+import React, { useState, useMemo } from "react";
 import { useQaData } from "@/lib/QaDataContext";
 import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
-import { statusBucket, checklistProgress, pct, buildLocationTree, topLocation } from "@/lib/qaUtils";
+import { statusBucket } from "@/lib/qaUtils";
 import { useVisis } from "@/lib/useVisis";
-import { Grid3x3, Loader2 } from "lucide-react";
+import { Grid3x3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const BUCKET_BG = { completed: "bg-emerald-500", in_progress: "bg-amber-500", open: "bg-slate-300" };

@@ -3,9 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQaData } from "@/lib/QaDataContext";
 import { useAuth } from "@/lib/AuthContext";
-import { statusBucket, checklistProgress, locationPath, subtreeOriginalIds } from "@/lib/qaUtils";
+import { locationPath } from "@/lib/qaUtils";
 import { readAll } from "@/components/qa/paging";
-import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import BackButton from "@/components/BackButton";
 import { logActivity } from "@/lib/activityLog";
@@ -14,7 +13,7 @@ import AddApartmentDialog from '@/components/qa/AddApartmentDialog';
 import {
   ClipboardList, Camera, FileText, Milestone as MilestoneIcon, MapPin, ChevronRight, Plus,
   Loader2, MapPin as LocationIcon, Ban, QrCode, Pencil, BedDouble, Bath, Sofa, WashingMachine,
-  DoorOpen, MessageSquare, Trash2, X,
+  DoorOpen, Trash2, X,
 } from "lucide-react";
 
 const TABS = [

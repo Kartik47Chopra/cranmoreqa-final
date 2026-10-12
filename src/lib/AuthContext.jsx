@@ -23,12 +23,15 @@ export const AuthProvider = ({ children }) => {
       setAuthError(null);
       
       try {
+        // The user check starts at the same time as the settings request instead of after it.
+        const pendingUser = appParams.token ? base44.auth.me() : null;
+        pendingUser?.catch(() => {});
         const publicSettings = await base44.app.getPublicSettings();
         setAppPublicSettings(publicSettings);
         
         // If we got the app public settings successfully, check if user is authenticated
         if (appParams.token) {
-          await checkUserAuth();
+          await checkUserAuth(pendingUser);
         } else {
           setIsLoadingAuth(false);
           setIsAuthenticated(false);
@@ -77,11 +80,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const checkUserAuth = async () => {
+  const checkUserAuth = async (pendingUser = null) => {
     try {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
+      const currentUser = await (pendingUser || base44.auth.me());
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);

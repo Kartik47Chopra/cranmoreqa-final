@@ -172,6 +172,9 @@ export default function Layout() {
           <div className="h-7 w-7 rounded-full bg-emerald-500 text-slate-900 flex items-center justify-center text-xs font-bold shrink-0">{userInitial}</div>
         </div>
 
+        {user && !["admin", "pm"].includes(user.role) && !user.company_id && (
+          <div className="shrink-0 bg-amber-50 px-4 py-2 text-xs text-amber-800">Your account is not linked to a company yet, so no Visis can be shown. Ask an admin to set your company in User Management.</div>
+        )}
         <div className="flex-1 overflow-hidden flex flex-col min-w-0">
           <Outlet />
         </div>

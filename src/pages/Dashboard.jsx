@@ -5,19 +5,17 @@ import { useAuth } from "@/lib/AuthContext";
 import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import DrillDownPanel from "@/components/DrillDownPanel";
-import { statusBucket, checklistProgress, pct, STATUS_META } from "@/lib/qaUtils";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { loadWithRetry, friendlyError, readCache, writeCache } from "@/lib/loadWithRetry";
+import { loadWithRetry, friendlyError } from "@/lib/loadWithRetry";
 import { filterAgg } from "@/lib/filterAgg";
-import { Building2, Wrench, Calendar, ChevronDown, ChevronUp, Activity as ActivityIcon, Inbox } from "lucide-react";
+import { Building2, Inbox } from "lucide-react";
 
 const BUCKET_COLORS = { completed: "#10b981", in_progress: "#f59e0b", open: "#94a3b8" };
 
 export default function Dashboard() {
-  const { project, locations, loading: dataLoading } = useQaData();
+  const { project, locations, loading: dataLoading, stats: rawAgg, refreshStats } = useQaData();
   const { user } = useAuth();
-  const [rawAgg, setAgg] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!rawAgg);
   const [reloadKey, setReloadKey] = useState(0);
   const [stale, setStale] = useState(false);
   const [drillLoading, setDrillLoading] = useState(false);
@@ -45,14 +43,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!project?.id) return;
-    // Summary only (served from the database snapshot). Drill-downs fetch their own items on demand.
-    const key = `cranmore_dash_${project.id}`;
-    const cached = readCache(key);
-    if (cached) { setAgg(cached); setLoading(false); } else setLoading(true);
+    // Summary comes from the shared project stats (one request, cached on the phone). Drill-downs fetch their own items on demand.
+    const cached = rawAgg;
+    if (!cached) setLoading(true);
     setError(null); setStale(false);
-    loadWithRetry(() => base44.functions.invoke("aggregateStats", { project_id: project.id }))
-      .then((res) => { setAgg(res.data); writeCache(key, res.data); })
-      .catch((e) => { if (cached) setStale(true); else setError(friendlyError(e)); })
+    refreshStats(false)
+      .then((d) => { if (!d) { if (cached) setStale(true); else setError(friendlyError()); } })
       .finally(() => setLoading(false));
   }, [project?.id, reloadKey]);
 

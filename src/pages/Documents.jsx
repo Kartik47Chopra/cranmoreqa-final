@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/AuthContext";
 import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import { logActivity } from "@/lib/activityLog";
-import { FileText, Upload, Search, Download, Trash2, Loader2 } from "lucide-react";
+import { FileText, Upload, Search, Download, Trash2 } from "lucide-react";
 import { readAll } from "@/components/qa/paging";
 
 export default function Documents() {

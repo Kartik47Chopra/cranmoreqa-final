@@ -4,10 +4,9 @@ import { useQaData } from "@/lib/QaDataContext";
 import { useAuth } from "@/lib/AuthContext";
 import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
-import RoleGate from "@/components/RoleGate";
-import { statusBucket, checklistProgress, pct } from "@/lib/qaUtils";
+import { checklistProgress, pct } from "@/lib/qaUtils";
 import StatusBadge from "@/components/StatusBadge";
-import { ListChecks, ChevronRight, Loader2 } from "lucide-react";
+import { ListChecks, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { readAll } from "@/components/qa/paging";
 

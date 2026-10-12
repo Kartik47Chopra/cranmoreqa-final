@@ -14,8 +14,16 @@ import SignedImage from "@/components/qa/SignedImage";
 import {
   CheckCircle2, Circle, Camera, Trash2, ClipboardCheck,
   AlertTriangle, History, X, Loader2, Send, FileText, ExternalLink,
-  Ban, Zap, Upload, Milestone as MilestoneIcon,
+  Ban, Zap, Upload,
 } from "lucide-react";
+
+// Weak site signal: retry each photo upload a couple of times before reporting a failure.
+async function uploadWithRetry(file, tries = 3) {
+  for (let i = 1; ; i++) {
+    try { return await base44.integrations.Core.UploadPrivateFile({ file }); }
+    catch (e) { if (i >= tries) throw e; await new Promise((r) => setTimeout(r, 1500 * i)); }
+  }
+}
 
 export default function InspectionDetail() {
   const { visiId } = useParams();
@@ -45,17 +53,21 @@ export default function InspectionDetail() {
       base44.entities.Visi.get(visiId),
       base44.entities.Attachment.filter({ visi_id: visiId }),
       base44.entities.Activity.filter({ visi_id: visiId }),
-    ]).then(async ([v, atts, acts]) => {
+    ]).then(([v, atts, acts]) => {
       setVisi(v);
       setAttachments(Array.isArray(atts) ? atts.filter((a) => !a.is_deleted) : []);
       setActivities(Array.isArray(acts) ? acts.sort((a, b) => new Date(b.created_at || b.created_date) - new Date(a.created_at || a.created_date)) : []);
+      // Only this Visi's documents, loaded after the screen is already showing.
       const docOrigIds = v.document_original_ids || [];
       const docIds = v.document_ids || [];
       if (docOrigIds.length > 0 || docIds.length > 0) {
-        try {
-          const docs = await readAll("Document", { project_id: v.project_id });
-          setDocuments(docs.filter((d) => !d.is_deleted && (docOrigIds.includes(d.original_id) || docIds.includes(d.id))));
-        } catch { setDocuments([]); }
+        Promise.all([
+          docIds.length ? readAll("Document", { id: { $in: docIds } }) : [],
+          docOrigIds.length ? readAll("Document", { original_id: { $in: docOrigIds } }) : [],
+        ]).then(([a, b]) => {
+          const byId = Object.fromEntries([...a, ...b].filter((d) => !d.is_deleted).map((d) => [d.id, d]));
+          setDocuments(Object.values(byId));
+        }).catch(() => setDocuments([]));
       }
     }).catch((e) => setError(e.message || "Failed to load Visi"))
       .finally(() => setLoading(false));
@@ -156,7 +168,7 @@ export default function InspectionDetail() {
     for (const file of files) {
       try {
         const { full, thumb } = await prepareImage(file);
-        const [a, b] = await Promise.all([base44.integrations.Core.UploadPrivateFile({ file: full }), base44.integrations.Core.UploadPrivateFile({ file: thumb })]);
+        const [a, b] = await Promise.all([uploadWithRetry(full), uploadWithRetry(thumb)]);
         const att = await base44.entities.Attachment.create({
           visi_id: target.visiId, location_id: target.locationId, file_uri: a.file_uri, thumb_uri: b.file_uri,
           step_id: step?.id, step_label: step ? stepLabel(step) : undefined,

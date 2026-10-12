@@ -4,9 +4,8 @@ import { useQaData } from "@/lib/QaDataContext";
 import { useAuth } from "@/lib/AuthContext";
 import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
-import RoleGate from "@/components/RoleGate";
-import { statusBucket, checklistProgress, pct } from "@/lib/qaUtils";
-import { Milestone as MilestoneIcon, Plus, Loader2, X, Calendar } from "lucide-react";
+import { statusBucket } from "@/lib/qaUtils";
+import { Milestone as MilestoneIcon, Plus, X, Calendar } from "lucide-react";
 import { useVisis } from "@/lib/useVisis";
 
 export default function Milestones() {

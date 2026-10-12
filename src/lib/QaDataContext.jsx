@@ -21,23 +21,33 @@ async function withRetry(fn, tries = 3) {
   }
   throw err;
 }
-// Locations are cached for the session so the sidebar paints instantly and never shows a false "No locations yet".
+// Project, company, template and location lists are cached on the device so every screen paints instantly
+// (and never shows a false "No locations yet"), then refresh in the background.
 const locKey = (pid) => `cranmore_locs_${pid}`;
-const readLocCache = (pid) => { try { const raw = sessionStorage.getItem(locKey(pid)); return raw ? JSON.parse(raw) : null; } catch { return null; } };
-const writeLocCache = (pid, rows) => { try { sessionStorage.setItem(locKey(pid), JSON.stringify(rows)); } catch { /* storage full: ignore */ } };
+const BASE_KEY = "cranmore_base";
+
+// Cached lists belong to the account that loaded them; another sign-in on the same phone starts clean.
+function claimCache(userId) {
+  try {
+    if (!userId || localStorage.getItem("cranmore_cache_owner") === userId) return;
+    Object.keys(localStorage).filter((k) => k.startsWith("cranmore_") && k !== PROJECT_KEY && !k.startsWith("cranmore_rooms_")).forEach((k) => localStorage.removeItem(k));
+    localStorage.setItem("cranmore_cache_owner", userId);
+  } catch { /* storage unavailable */ }
+}
 
 export function QaDataProvider({ children }) {
-  const [projects, setProjects] = useState([]);
+  const { user } = useAuth();
+  claimCache(user?.id);
   const [projectId, setProjectId] = useState(() => localStorage.getItem(PROJECT_KEY) || null);
-  const [companies, setCompanies] = useState([]);
-  const [templates, setTemplates] = useState([]);
-  const [locations, setLocations] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState(() => readCache(BASE_KEY)?.projects || []);
+  const [companies, setCompanies] = useState(() => readCache(BASE_KEY)?.companies || []);
+  const [templates, setTemplates] = useState(() => readCache(BASE_KEY)?.templates || []);
+  const [locations, setLocations] = useState(() => (projectId && readCache(locKey(projectId))) || []);
+  const [loading, setLoading] = useState(() => !(projectId && readCache(BASE_KEY) && readCache(locKey(projectId))?.length));
   const [loadError, setLoadError] = useState(false);
   const [stats, setStats] = useState(() => { const p = localStorage.getItem(PROJECT_KEY); return p ? readCache(`cranmore_stats_${p}`) : null; });
   const [revision, setRevision] = useState(0);
   const inflight = useRef(null);
-  const { user } = useAuth();
 
   // Stats: one request at a time. force=true recomputes on the server (use after MY OWN change); force=false uses the server cache.
   const fetchStats = useCallback(async (force) => {
@@ -55,27 +65,31 @@ export function QaDataProvider({ children }) {
 
   const load = useCallback(async () => {
     setLoadError(false);
-    const cached = projectId ? readLocCache(projectId) : null;
-    if (cached && cached.length) { setLocations(cached); setLoading(false); } else { setLoading(true); }
+    const cached = projectId ? readCache(locKey(projectId)) : null;
+    if (cached && cached.length && readCache(BASE_KEY)) { setLocations(cached); setLoading(false); } else { setLoading(true); }
+    const loadLocations = async (pid) => {
+      const locs = await loadWithRetry(() => readAll("Location", { project_id: pid }));
+      const active = locs.filter((l) => !l.is_deleted);
+      setLocations(active);
+      writeCache(locKey(pid), active);
+    };
     try {
+      // Locations load at the same time as the project list when the project is already known.
+      const early = projectId ? loadLocations(projectId) : null;
+      early?.catch(() => {});
       const [projs, comps, tpls] = await loadWithRetry(() => Promise.all([readAll("Project"), readAll("Company"), readAll("Template")]));
-      setProjects(projs);
-      setCompanies(comps.filter((c) => !c.is_deleted));
-      setTemplates(tpls.filter((t) => !t.is_deleted));
+      const base = { projects: projs, companies: comps.filter((c) => !c.is_deleted), templates: tpls.filter((t) => !t.is_deleted) };
+      setProjects(base.projects); setCompanies(base.companies); setTemplates(base.templates);
+      writeCache(BASE_KEY, base);
       let pid = projectId;
       if (!pid && projs.length > 0) {
         pid = projs[0].id;
         localStorage.setItem(PROJECT_KEY, pid);
         setProjectId(pid);
       }
-      if (pid) {
-        const locs = await loadWithRetry(() => readAll("Location", { project_id: pid }));
-        const active = locs.filter((l) => !l.is_deleted);
-        setLocations(active);
-        writeLocCache(pid, active);
-      } else {
-        setLocations([]);
-      }
+      if (early) await early;
+      else if (pid) await loadLocations(pid);
+      else setLocations([]);
     } catch (e) {
       console.error("QaData load error", e);
       if (!cached || !cached.length) setLoadError(true);

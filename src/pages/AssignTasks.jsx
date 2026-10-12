@@ -1,14 +1,14 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQaData } from "@/lib/QaDataContext";
 import { useAuth } from "@/lib/AuthContext";
 import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import RoleGate from "@/components/RoleGate";
-import { statusBucket, checklistProgress, pct } from "@/lib/qaUtils";
+import { statusBucket, checklistProgress } from "@/lib/qaUtils";
 import StatusBadge from "@/components/StatusBadge";
 import { logActivity } from "@/lib/activityLog";
-import { ClipboardList, ChevronRight, Loader2, Check } from "lucide-react";
+import { ClipboardList, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useVisis } from "@/lib/useVisis";
 

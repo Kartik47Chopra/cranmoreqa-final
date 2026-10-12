@@ -4,35 +4,30 @@ import { useQaData } from "@/lib/QaDataContext";
 import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import RoleGate from "@/components/RoleGate";
-import { Users, UserPlus, Loader2, Mail } from "lucide-react";
+import { Users, UserPlus, Loader2 } from "lucide-react";
 
 export default function UserManagement() {
-  const { companies, companyMap } = useQaData();
+  const { companies } = useQaData();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("user");
+  const [inviteRole, setInviteRole] = useState("trade");
   const [inviting, setInviting] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
-    base44.entities.User.list().then((all) => setUsers(Array.isArray(all) ? all : []))
-      .catch(console.error).finally(() => setLoading(false));
-  }, []);
+  const [error, setError] = useState("");
 
-  async function changeRole(u, role) {
-    try {
-      await base44.entities.User.update(u.id, { role });
-      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, role } : x));
-    } catch (e) { console.error(e); }
-  }
+  const loadUsers = () => base44.functions.invoke("manageUsers", { action: "list" })
+    .then(({ data }) => setUsers(data.users || []))
+    .catch((e) => setError(e?.message || "Could not load users"));
 
-  async function changeCompany(u, company_id) {
-    try {
-      await base44.auth.updateMe({ data: { ...u.data, company_id } });
-      // Can only update self; for other users, would need admin API
-      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, data: { ...x.data, company_id } } : x));
-    } catch (e) { console.error(e); }
+  useEffect(() => { setLoading(true); loadUsers().finally(() => setLoading(false)); }, []);
+
+  async function save(u, patch) {
+    setError("");
+    const before = users;
+    setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, ...patch } : x));
+    try { await base44.functions.invoke("manageUsers", { action: "update", user_id: u.id, ...patch }); }
+    catch (e) { setUsers(before); setError(e?.response?.data?.error || e?.message || "Could not save"); }
   }
 
   async function invite() {
@@ -41,8 +36,7 @@ export default function UserManagement() {
     try {
       await base44.users.inviteUser(inviteEmail, inviteRole);
       setInviteEmail("");
-      // Refresh list
-      base44.entities.User.list().then((all) => setUsers(Array.isArray(all) ? all : []));
+      loadUsers();
     } catch (e) { console.error(e); alert(e.message || "Failed to invite user"); }
     setInviting(false);
   }
@@ -59,7 +53,9 @@ export default function UserManagement() {
           <div className="flex flex-wrap gap-2">
             <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} type="email" placeholder="email@example.com" className="flex-1 min-w-[200px] rounded-lg border border-slate-200 p-2.5 text-sm" />
             <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="rounded-lg border border-slate-200 p-2.5 text-sm">
-              <option value="user">User</option>
+              <option value="trade">Trade (crew)</option>
+              <option value="pm">PM</option>
+              <option value="viewer">Viewer</option>
               <option value="admin">Admin</option>
             </select>
             <button onClick={invite} disabled={inviting || !inviteEmail} className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
@@ -68,6 +64,8 @@ export default function UserManagement() {
           </div>
         </div>
 
+        <p className="mb-3 text-xs text-slate-500">Trade and Viewer users only see Visis for their company, so set a company for every crew member.</p>
+        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
         {/* User list */}
         {loading ? (
           <div className="flex justify-center py-10"><Loader2 className="animate-spin text-slate-300" size={28} /></div>
@@ -76,7 +74,7 @@ export default function UserManagement() {
         ) : (
           <div className="space-y-2">
             {users.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-3">
+              <div key={u.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-3">
                 <div className="h-9 w-9 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm font-bold shrink-0">
                   {(u.full_name || u.email || "?")[0]?.toUpperCase()}
                 </div>
@@ -84,13 +82,13 @@ export default function UserManagement() {
                   <div className="truncate text-sm font-semibold text-slate-800">{u.full_name || u.email}</div>
                   <div className="truncate text-xs text-slate-500">{u.email}</div>
                 </div>
-                <select value={u.role || "user"} onChange={(e) => changeRole(u, e.target.value)} className="rounded-lg border border-slate-200 py-1.5 pl-2 pr-6 text-xs font-semibold">
+                <select value={u.role || "viewer"} onChange={(e) => save(u, { role: e.target.value })} className="rounded-lg border border-slate-200 py-1.5 pl-2 pr-6 text-xs font-semibold">
                   <option value="admin">Admin</option>
                   <option value="pm">PM</option>
                   <option value="trade">Trade</option>
                   <option value="viewer">Viewer</option>
                 </select>
-                <select value={u.data?.company_id || ""} onChange={(e) => changeCompany(u, e.target.value)} className="rounded-lg border border-slate-200 py-1.5 pl-2 pr-6 text-xs">
+                <select value={u.company_id || ""} onChange={(e) => save(u, { company_id: e.target.value })} className={`rounded-lg border py-1.5 pl-2 pr-6 text-xs ${!u.company_id && !["admin", "pm"].includes(u.role) ? "border-amber-400 bg-amber-50" : "border-slate-200"}`}>
                   <option value="">No company</option>
                   {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
