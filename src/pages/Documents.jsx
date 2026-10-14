@@ -6,7 +6,7 @@ import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import { logActivity } from "@/lib/activityLog";
 import { FileText, Upload, Search, Download, Trash2 } from "lucide-react";
-import { readAll } from "@/components/qa/paging";
+import { readAll, openStoredFile } from "@/components/qa/paging";
 
 export default function Documents() {
   const { project } = useQaData();
@@ -104,7 +104,7 @@ export default function Documents() {
                 <div className="truncate text-sm font-semibold text-slate-800">{d.title || d.filename}</div>
                 <div className="text-xs text-slate-500">{d.drawing_no || ""} {d.revision ? `· Rev ${d.revision}` : ""} {d.category ? `· ${d.category}` : ""}</div>
               </div>
-              <a href={d.file_uri} target="_blank" rel="noreferrer" className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"><Download size={16} /></a>
+              {d.file_uri ? <button onClick={() => openStoredFile(d.file_uri).catch(() => alert("Could not open this file. Please try again."))} aria-label="Open file" className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"><Download size={16} /></button> : <span className="rounded-lg border border-dashed border-slate-200 px-2 py-1.5 text-[11px] text-slate-400">No file</span>}
               {user?.role === "admin" && (
                 <button onClick={() => deleteDoc(d)} className="rounded-lg border border-slate-200 p-2 text-red-500 hover:bg-red-50"><Trash2 size={16} /></button>
               )}

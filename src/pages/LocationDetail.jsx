@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { useQaData } from "@/lib/QaDataContext";
 import { useAuth } from "@/lib/AuthContext";
 import { locationPath } from "@/lib/qaUtils";
-import { readAll } from "@/components/qa/paging";
+import { readAll, openStoredFile } from "@/components/qa/paging";
 import EmptyState from "@/components/EmptyState";
 import BackButton from "@/components/BackButton";
 import { logActivity } from "@/lib/activityLog";
@@ -370,13 +370,13 @@ function DocumentsTab({ documents }) {
   return (
     <div className="space-y-2">
       {documents.map((d) => (
-        <a key={d.id} href={d.file_uri} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50">
+        <button key={d.id} onClick={() => openStoredFile(d.file_uri).catch(() => alert("Could not open this file. Please try again."))} disabled={!d.file_uri} className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-left hover:bg-slate-50 disabled:opacity-60">
           <FileText size={18} className="text-slate-400 shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold text-slate-800">{d.title || d.filename}</div>
             <div className="text-xs text-slate-500">{d.drawing_no || ""} {d.revision ? `· Rev ${d.revision}` : ""}</div>
           </div>
-        </a>
+        </button>
       ))}
     </div>
   );

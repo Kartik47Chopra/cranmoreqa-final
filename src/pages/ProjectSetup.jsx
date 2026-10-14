@@ -11,6 +11,7 @@ import ImportTool from "@/components/ImportTool";
 import PhotoLinkTool from "@/components/qa/PhotoLinkTool";
 import PhotoAssignTool from "@/components/qa/PhotoAssignTool";
 import OldSiteProgressTool from "@/components/qa/OldSiteProgressTool";
+import DrawingLinkTool from "@/components/qa/DrawingLinkTool";
 import DataTools from "@/components/DataTools";
 
 const TABS = [
@@ -41,7 +42,7 @@ export default function ProjectSetup() {
         {tab === "details" && <DetailsTab />}
         {tab === "locations" && <LocationsTab />}
         {tab === "templates" && <TemplatesTab />}
-        {tab === "import" && <><ImportTool /><PhotoLinkTool /><OldSiteProgressTool /><PhotoAssignTool /></>}
+        {tab === "import" && <><ImportTool /><PhotoLinkTool /><DrawingLinkTool /><OldSiteProgressTool /><PhotoAssignTool /></>}
         {tab === "deleted" && <DeletedTab />}
         {tab === "data" && <DataTools />}
       </PageShell>
