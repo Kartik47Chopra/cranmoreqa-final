@@ -2,7 +2,7 @@ export const recoveryEntities = ['Company','Location','Template','Visi','Activit
 export async function readAll(entity, query = {}) {
   const records = []; let cursor;
   do {
-    const page = await entity.filter(query, { limit: 1000, ...(cursor ? { cursor } : {}) });
+    const page = await retry(() => entity.filter(query, { limit: 1000, ...(cursor ? { cursor } : {}) }));
     records.push(...(page.items || []));
     if (!page.has_more) break;
     cursor = page.next_cursor;

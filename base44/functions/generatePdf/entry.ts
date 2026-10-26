@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { jsPDF } from 'npm:jspdf@4.2.1';
-import { readAll } from '../../shared/paging.ts';
+import { readAll, retry } from '../../shared/paging.ts';
 import { buildStats, locationIndex } from '../../shared/stats.ts';
 import { isStepComplete } from '../../shared/qaStatus.ts';
 import { buildProgressPdf, pdfText } from '../../shared/pdfBuilder.ts';
@@ -68,7 +68,7 @@ export default async function (req) {
     // photos: thumbnails first (about 400 px), at most 3 per Visi, fetched 8 at a time
     const atts = [], idList = items.map((v) => v.id);
     for (let i = 0; i < idList.length; i += 200) atts.push(...await readAll(E.Attachment, { visi_id: { $in: idList.slice(i, i + 200) } }));
-    const photosByVisi = {}, jobs = [];
+    const photosByVisi = {}, jobs = []; let failedPhotos = 0;
     for (const a of atts.filter((x) => !x.is_deleted).sort((p, q) => String(p.uploaded_at).localeCompare(String(q.uploaded_at)))) {
       const uri = a.thumb_uri || ((a.size || 0) < 300000 ? a.file_uri : null);
       if (!uri || String(uri).startsWith('pending:')) continue;
@@ -77,13 +77,13 @@ export default async function (req) {
       list.push(null); const slot = list.length - 1;
       jobs.push(async () => {
         try {
-          const { signed_url } = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({ file_uri: uri, expires_in: 600 });
-          const r = await fetch(signed_url); if (!r.ok) return;
+          const { signed_url } = await retry(() => base44.asServiceRole.integrations.Core.CreateFileSignedUrl({ file_uri: uri, expires_in: 600 }));
+          const r = await fetch(signed_url); if (!r.ok) { failedPhotos++; return; }
           list[slot] = { data: 'data:image/jpeg;base64,' + toBase64(await r.arrayBuffer()) };
-        } catch (_) { /* leaves "No photo" */ }
+        } catch (_) { failedPhotos++; /* leaves "No photo" */ }
       });
     }
-    for (let i = 0; i < jobs.length; i += 8) await Promise.all(jobs.slice(i, i + 8).map((f) => f()));
+    for (let i = 0; i < jobs.length; i += 4) { await Promise.all(jobs.slice(i, i + 4).map((f) => f())); await new Promise((r) => setTimeout(r, 150)); }
     for (const k of Object.keys(photosByVisi)) photosByVisi[k] = photosByVisi[k].filter(Boolean);
 
     const { groups, summaryRows } = buildRows(items, idx, photosByVisi);
@@ -91,8 +91,8 @@ export default async function (req) {
     const out = buildProgressPdf(jsPDF, { projectName, title, dateLabel, generatedLabel: new Date().toLocaleString('en-AU', { timeZone: 'Australia/Melbourne' }), summaryRows, groups });
     if (out.overlaps > 0 || out.outOfBounds > 0) throw new Error(`PDF layout check failed (${out.overlaps} overlaps, ${out.outOfBounds} out of bounds)`);
     const filename = `${title.replace(/\s+/g, '-')}_${pdfText(projectName).replace(/\s+/g, '-')}_${new Date().toISOString().slice(0, 10)}.pdf`;
-    const { file_uri } = await base44.asServiceRole.integrations.Core.UploadPrivateFile({ file: new File([out.bytes], filename, { type: 'application/pdf' }) });
-    const { signed_url } = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({ file_uri, expires_in: 600 });
-    return Response.json({ url: signed_url, filename, pages: out.pages, items: out.items, photosEmbedded: out.photosEmbedded, overlaps: out.overlaps, bytes: out.bytes.byteLength });
+    const { file_uri } = await retry(() => base44.asServiceRole.integrations.Core.UploadPrivateFile({ file: new File([out.bytes], filename, { type: 'application/pdf' }) }));
+    const { signed_url } = await retry(() => base44.asServiceRole.integrations.Core.CreateFileSignedUrl({ file_uri, expires_in: 600 }));
+    return Response.json({ url: signed_url, filename, pages: out.pages, items: out.items, photosEmbedded: out.photosEmbedded, failedPhotos, overlaps: out.overlaps, bytes: out.bytes.byteLength });
   } catch (error) { return Response.json({ error: error.message }, { status: 500 }); }
 }
