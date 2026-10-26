@@ -40,7 +40,7 @@ export default function Report() {
   async function generateClaimPreview() {
     setGenerating(true);
     try {
-      const res = await base44.functions.invoke("aggregateStats", { project_id: project.id, building_id: claim.building || undefined, trade: claim.trade || undefined });
+      const res = await base44.functions.invoke("aggregateStats", { project_id: project.id, building_id: claim.building || undefined, trade: claim.trade || undefined, items: true });
       const from = claim.from ? new Date(claim.from) : null, to = claim.to ? new Date(claim.to + "T23:59:59") : null;
       const items = (res.data.items || []).filter((i) => {
         if (i.override_status === "na") return false;
