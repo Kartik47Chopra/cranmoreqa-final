@@ -113,13 +113,19 @@ export function QaDataProvider({ children }) {
   // One-time standard room setup (admin only): adds missing rooms (124, 224, Pantry - East) and the Entry door / Sanitary Visis. Safe to repeat: it only adds what is missing.
   useEffect(() => {
     if (!projectId || user?.role !== "admin" || loading) return;
-    const flag = `cranmore_rooms_v2_${projectId}`;
+    const flag = `cranmore_setup_v3_${projectId}`;
     if (localStorage.getItem(flag)) return;
     (async () => {
       try {
         const pre = (await base44.functions.invoke("ensureStandardRoomVisis", { project_id: projectId, preview: true })).data;
         if (pre?.total > 0) {
           await base44.functions.invoke("ensureStandardRoomVisis", { project_id: projectId, preview: false });
+          await refreshStats(true); await load();
+        }
+        // Then make sure every door on the door schedule has a Door Visi (add only, never removes).
+        const doors = (await base44.functions.invoke("syncDoorSchedule", { project_id: projectId, preview: true })).data;
+        if (doors?.doors_to_add > 0) {
+          await base44.functions.invoke("syncDoorSchedule", { project_id: projectId, preview: false });
           await refreshStats(true); await load();
         }
         localStorage.setItem(flag, "1");
