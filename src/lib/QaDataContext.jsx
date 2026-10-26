@@ -102,6 +102,14 @@ export function QaDataProvider({ children }) {
   // First stats call uses the server cache (fast). No realtime subscriptions: they recomputed everything on every single change.
   useEffect(() => { refreshStats(false); }, [refreshStats]);
 
+  // New accounts get full access automatically: promote once, then reload so the new role takes effect everywhere.
+  useEffect(() => {
+    if (!user?.id || ["admin", "pm", "trade"].includes(user.role)) return;
+    const flag = `cranmore_access_${user.id}`;
+    try { if (sessionStorage.getItem(flag)) return; sessionStorage.setItem(flag, "1"); } catch { /* ignore */ }
+    base44.functions.invoke("ensureAccess", {}).then((r) => { if (r?.data?.changed) window.location.reload(); }).catch((e) => console.error("ensureAccess", e));
+  }, [user?.id, user?.role]);
+
   // One-time standard room setup (admin only): adds missing rooms (124, 224, Pantry - East) and the Entry door / Sanitary Visis. Safe to repeat: it only adds what is missing.
   useEffect(() => {
     if (!projectId || user?.role !== "admin" || loading) return;
