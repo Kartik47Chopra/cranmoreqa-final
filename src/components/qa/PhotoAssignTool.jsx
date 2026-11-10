@@ -63,6 +63,19 @@ export default function PhotoAssignTool() {
           const [a, b] = await Promise.all([base44.integrations.Core.UploadPrivateFile({ file: full }), base44.integrations.Core.UploadPrivateFile({ file: thumb })]);
           await base44.entities.Attachment.create({ visi_id: v.id, location_id: v.location_id, file_uri: a.file_uri, thumb_uri: b.file_uri, original_filename: r.file.name, content_type: "image/jpeg", size: full.size, uploaded_by: user?.id, uploaded_by_company: user?.company_id, uploaded_at: new Date().toISOString() });
           logActivity({ project_id: project.id, visi_id: v.id, user: user?.full_name || user?.email, text: `Photo uploaded: ${r.file.name}`, type: "photo" });
+          // A real photo is now attached: tick the noggin step (only for Sanitary Visis, only this step).
+          if (/^225-SN-/i.test(r.code)) {
+            try {
+              const fresh = await base44.entities.Visi.get(v.id);
+              const idx = (fresh.steps || []).findIndex((s) => /noggins marked/i.test(s.label || "") && s.status !== "complete");
+              if (idx >= 0) {
+                const now = new Date().toISOString();
+                const steps = fresh.steps.map((s, i) => (i === idx ? { ...s, status: "complete", completed_at: now, completed_by: user?.id } : s));
+                await base44.entities.Visi.update(v.id, { steps, last_updated: now });
+                logActivity({ project_id: project.id, visi_id: v.id, user: user?.full_name || user?.email, text: `Step "${fresh.steps[idx].label}" marked complete (photo attached)`, type: "step" });
+              }
+            } catch (e) { console.error(e); }
+          }
           patch(r.id, { state: "done" });
         } catch (e) { patch(r.id, { state: "error", msg: e?.message || "Upload failed" }); }
       }
@@ -75,7 +88,7 @@ export default function PhotoAssignTool() {
   return (
     <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
       <div className="flex items-center gap-2 font-display font-bold text-slate-800"><Images size={18} className="text-emerald-600" /> Add photos to Visis</div>
-      <p className="mt-1 text-sm text-slate-500">Choose photos in any format (jpg, jpeg, png, webp, heic). Each photo is compressed, then attached to the Visi whose code you pick, and it appears on that Visi's screen and in the Progress Claim PDF. A code in the file name (for example 225-DR-406_1.jpg) is picked up automatically.</p>
+      <p className="mt-1 text-sm text-slate-500">Choose photos in any format (jpg, jpeg, png, webp, heic). Each photo is compressed, then attached to the Visi whose code you pick, and it appears on that Visi's screen and in the Progress Claim PDF. Photos added to a Sanitary (noggin) Visi also tick its &quot;Noggins marked with photo evidence&quot; step. A code in the file name (for example 225-DR-406_1.jpg) is picked up automatically.</p>
       <input ref={inputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={(e) => { choose(e.target.files); e.target.value = ""; }} />
       <button onClick={() => inputRef.current?.click()} disabled={busy} className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"><Images size={15} /> Choose photos</button>
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
