@@ -10,6 +10,7 @@ import { Settings, Building2, FileText, Upload, Trash2, RotateCcw, Plus, Save, L
 import ImportTool from "@/components/ImportTool";
 import PhotoLinkTool from "@/components/qa/PhotoLinkTool";
 import PhotoAssignTool from "@/components/qa/PhotoAssignTool";
+import NogginConfirmTool from "@/components/qa/NogginConfirmTool";
 import OldSiteProgressTool from "@/components/qa/OldSiteProgressTool";
 import DrawingLinkTool from "@/components/qa/DrawingLinkTool";
 import DataTools from "@/components/DataTools";
@@ -42,7 +43,7 @@ export default function ProjectSetup() {
         {tab === "details" && <DetailsTab />}
         {tab === "locations" && <LocationsTab />}
         {tab === "templates" && <TemplatesTab />}
-        {tab === "import" && <><ImportTool /><PhotoLinkTool /><DrawingLinkTool /><OldSiteProgressTool /><PhotoAssignTool /></>}
+        {tab === "import" && <><ImportTool /><PhotoLinkTool /><DrawingLinkTool /><OldSiteProgressTool /><PhotoAssignTool /><NogginConfirmTool /></>}
         {tab === "deleted" && <DeletedTab />}
         {tab === "data" && <DataTools />}
       </PageShell>
