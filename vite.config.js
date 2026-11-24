@@ -16,6 +16,15 @@ export default defineConfig({
     }),
     react(),
   ],
+  // one React copy, and pre-bundle libraries used by lazy pages so the preview
+  // never re-bundles React mid-session (which caused "resolveDispatcher().useState")
+  resolve: { dedupe: ['react', 'react-dom'] },
+  optimizeDeps: {
+    include: [
+      'react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime',
+      'react-router-dom', '@tanstack/react-query', 'lucide-react', 'recharts', 'jspdf',
+    ],
+  },
   // transpile newer syntax so older iPhones (Safari 14+) can run the app
   build: { target: ['es2019', 'safari14'] },
 });
