@@ -6,6 +6,9 @@ export default async function(req) {
     if (!user || user.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });
     const { project_id, preview = false } = await req.json();
     if (!project_id) return Response.json({ error: 'project_id required' }, { status: 400 });
+    // These two tools only know the Summerset Oakleigh South rooms and door schedule.
+    const project = await base44.asServiceRole.entities.Project.get(project_id);
+    if (!/summerset/i.test(project?.name || '')) return Response.json({ skipped: true, total: 0, doors_to_add: 0, created: 0 });
     const result = await ensureRooms(base44.asServiceRole.entities, project_id, user, preview);
     if (!preview) await base44.functions.invoke('aggregateStats', { project_id, refresh: true, limit: 1 });
     return Response.json(result);

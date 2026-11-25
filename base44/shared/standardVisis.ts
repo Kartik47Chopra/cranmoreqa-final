@@ -1,11 +1,11 @@
 import { readAll, retry } from './paging.ts';
 import { locationIndex } from './stats.ts';
 export const TRADE_PREFIX = { Door: 'DR', 'Entry door': 'ED', Skirting: 'SK', Sanitary: 'SN', 'Robe Jamb': 'RJ', Miscellaneous: 'MI', Utility: 'MI' };
-export function allocateFromRows(rows, prefix, count) {
+export function allocateFromRows(rows, prefix, count, projectNo = '225') {
   if (!Object.values(TRADE_PREFIX).includes(prefix) || !Number.isInteger(count) || count < 1 || count > 300) throw new Error('Invalid prefix or count');
-  const regex = new RegExp(`^225-${prefix}-(\\d+)$`);
+  const regex = new RegExp(`^${projectNo}-${prefix}-(\\d+)$`);
   const highest = rows.reduce((max, v) => Math.max(max, Number(v.code?.match(regex)?.[1] || 0)), 0);
-  return Array.from({ length: count }, (_, i) => `225-${prefix}-${String(highest + i + 1).padStart(3, '0')}`);
+  return Array.from({ length: count }, (_, i) => `${projectNo}-${prefix}-${String(highest + i + 1).padStart(3, '0')}`);
 }
 export async function allocateCodes(entities, prefix, count, rows) { return allocateFromRows(rows || await readAll(entities.Visi), prefix, count); }
 export function standardTrades(name, racf = false) {
